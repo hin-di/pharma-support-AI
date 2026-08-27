@@ -1,0 +1,19 @@
+{
+  "pharmacy_name": "ひまわり調剤薬局",
+  "dispensing_basic_fee_type": "basic_1",
+  "monthly_prescriptions": 1200,
+  "concentration_rate": 78.5,
+  "narcotics_count": 4,
+  "home_visit_count": 22,
+  "family_pharmacist_count": 38,
+  "info_provision_count": 15,
+  "preavoid_count": 2,
+  "generic_percentage": 84.2,
+  "night_holiday_count": 110,
+  "stock_drugs_count": 1280,
+  "has_24h_system": true,
+  "has_infection_system": true,
+  "has_online_qualification": true,
+  "has_electronic_prescription": true,
+  "has_otc_sales": true
+}
