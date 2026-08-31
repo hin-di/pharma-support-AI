@@ -3,27 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>PharmaSupport AI - 薬局加算ダッシュボード</title>
-  <!-- Tailwind CSS -->
+  <title>PharmaSupport AI - 薬局加算・進捗管理ダッシュボード</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
-  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link rel="stylesheet" href="/static/css/style.css">
   <style>
-    /* Mobile Safe Area & Touch Enhancements */
-    body {
-      -webkit-tap-highlight-color: transparent;
-    }
-    .pb-safe {
-      padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
-    }
+    body { -webkit-tap-highlight-color: transparent; }
+    .pb-safe { padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px)); }
   </style>
 </head>
 <body class="bg-slate-100 text-slate-800 min-h-screen font-sans antialiased pb-safe sm:pb-8">
 
-  <!-- Desktop & Tablet Header -->
   <header class="bg-emerald-700 text-white shadow-md sticky top-0 z-40 print:hidden">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between">
       <div class="flex items-center space-x-2.5 sm:space-x-3">
@@ -33,7 +24,7 @@
         <div>
           <h1 class="text-base sm:text-lg font-bold tracking-tight flex items-center gap-1.5 sm:gap-2">
             PharmaSupport AI
-            <span class="text-[10px] sm:text-xs font-normal bg-emerald-600 px-1.5 py-0.5 rounded-full text-emerald-100">Step 1</span>
+            <span class="text-[10px] sm:text-xs font-normal bg-emerald-600 px-1.5 py-0.5 rounded-full text-emerald-100">Step 1.5</span>
           </h1>
           <p class="text-[10px] sm:text-xs text-emerald-200 line-clamp-1">地域支援加算 ＆ 患者別加算ナビ</p>
         </div>
@@ -44,7 +35,7 @@
           <div class="text-[10px] text-emerald-200">管理薬局</div>
           <div class="text-xs sm:text-sm font-semibold" id="headerPharmacyName">ひまわり調剤薬局</div>
         </div>
-        <button onclick="toggleSimulatorDrawer()" class="bg-emerald-800 hover:bg-emerald-900 text-white p-1.5 sm:px-3 sm:py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 shadow-sm">
+        <button onclick="toggleSimulatorDrawer(true)" class="bg-emerald-800 hover:bg-emerald-900 text-white p-1.5 sm:px-3 sm:py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 shadow-sm">
           <i data-lucide="sliders" class="w-4 h-4 text-emerald-300"></i>
           <span class="hidden sm:inline">薬局設定</span>
         </button>
@@ -55,7 +46,6 @@
       </div>
     </div>
     
-    <!-- Desktop Tab Navigation -->
     <div class="hidden sm:flex max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-x-6 border-t border-emerald-600/50">
       <button onclick="switchTab('dashboard')" id="tab-btn-dashboard" class="tab-btn border-b-2 border-white py-2.5 text-xs font-bold flex items-center space-x-1.5 text-white">
         <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
@@ -72,7 +62,6 @@
     </div>
   </header>
 
-  <!-- Mobile Bottom Navigation Bar (Fixed for Smartphones) -->
   <nav class="sm:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200 z-50 px-2 py-1 flex justify-around items-center shadow-lg print:hidden">
     <button onclick="switchTab('dashboard')" id="m-tab-btn-dashboard" class="m-tab-btn flex flex-col items-center py-1 px-3 text-emerald-700 font-bold transition">
       <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
@@ -86,24 +75,17 @@
       <i data-lucide="file-text" class="w-5 h-5"></i>
       <span class="text-[10px] mt-0.5">朝シート</span>
     </button>
-    <button onclick="toggleSimulatorDrawer()" class="flex flex-col items-center py-1 px-3 text-slate-500 font-medium transition">
+    <button onclick="toggleSimulatorDrawer(true)" class="flex flex-col items-center py-1 px-3 text-slate-500 font-medium transition">
       <i data-lucide="settings" class="w-5 h-5"></i>
       <span class="text-[10px] mt-0.5">設定</span>
     </button>
   </nav>
 
-  <!-- Main Content Container -->
   <main class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
 
-    <!-- ========================================== -->
-    <!-- TAB 1: 薬局全体 施設基準ダッシュボード -->
-    <!-- ========================================== -->
-    <section id="tab-dashboard" class="tab-content space-y-4 sm:space-y-6">
+    <section id="tab-dashboard" class="tab-content space-y-5 sm:space-y-6">
       
-      <!-- Top Alert & Summary Cards (Mobile Stack / Desktop Grid) -->
       <div class="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-5">
-        
-        <!-- Main Tier Status -->
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-5 relative overflow-hidden flex flex-col justify-between">
           <div class="flex justify-between items-start">
             <div>
@@ -120,7 +102,6 @@
           </div>
         </div>
 
-        <!-- Supply Addition Status -->
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-5 flex flex-col justify-between">
           <div class="flex justify-between items-start">
             <div>
@@ -132,12 +113,11 @@
             </div>
           </div>
           <div class="mt-3 pt-2.5 border-t border-slate-100 text-[11px] sm:text-xs text-slate-600 flex justify-between">
-            <span>備蓄: <strong id="statStockDrugs" class="text-slate-800">--</strong> 品目</span>
+            <span>備蓄品目: <strong id="statStockDrugs" class="text-slate-800">--</strong></span>
             <span>後発品: <strong id="statGenericRate" class="text-slate-800">--</strong>%</span>
           </div>
         </div>
 
-        <!-- Annual Impact Simulation -->
         <div class="bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-xl shadow-sm p-4 sm:p-5 flex flex-col justify-between">
           <div>
             <span class="text-[10px] sm:text-xs font-medium text-slate-300 uppercase tracking-wider">加算による年間収益影響（推定）</span>
@@ -146,136 +126,99 @@
           </div>
           <div class="mt-2.5 pt-2 border-t border-slate-700/60 text-[10px] sm:text-xs text-slate-300 flex items-center gap-1.5">
             <i data-lucide="trending-up" class="w-3.5 h-3.5 text-emerald-400"></i>
-            <span>基準達成が薬局経営の要泉です</span>
+            <span>基準維持が薬局経営の基盤です</span>
           </div>
         </div>
       </div>
 
-      <!-- Action Advices Banner -->
-      <div id="adviceBanner" class="bg-amber-50 border border-amber-200 rounded-xl p-3.5 sm:p-4 flex items-start gap-3">
-        <div class="p-1.5 sm:p-2 bg-amber-100 text-amber-700 rounded-lg shrink-0 mt-0.5">
-          <i data-lucide="alert-triangle" class="w-4 h-4 sm:w-5 sm:h-5"></i>
+      <div id="adviceBanner" class="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-3">
+        <div class="flex items-start gap-2.5">
+          <div class="p-1.5 bg-amber-100 text-amber-700 rounded-lg shrink-0 mt-0.5">
+            <i data-lucide="alert-triangle" class="w-4 h-4 sm:w-5 sm:h-5"></i>
+          </div>
+          <div>
+            <h4 class="text-xs sm:text-sm font-bold text-amber-900">加算達成に向けたアクション指針</h4>
+            <p id="summaryMsgText" class="text-[11px] sm:text-xs text-amber-800 mt-0.5">読み込み中...</p>
+          </div>
         </div>
-        <div class="flex-1">
-          <h4 class="text-xs sm:text-sm font-bold text-amber-900">目標値の逆算アドバイス</h4>
-          <p id="summaryMsgText" class="text-[11px] sm:text-xs text-amber-800 mt-0.5">読み込み中...</p>
-          <ul id="priorityActionList" class="mt-1.5 space-y-1 text-[11px] sm:text-xs text-amber-950 list-disc list-inside font-medium leading-relaxed">
-          </ul>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 border-t border-amber-200/70 text-xs">
+          <div class="bg-white/80 rounded-lg p-3 border border-amber-200/60 space-y-1.5">
+            <span class="font-bold text-amber-900 flex items-center gap-1">
+              <i data-lucide="trending-up" class="w-3.5 h-3.5 text-emerald-600"></i>
+              【実績面】日々の現場アクション目標
+            </span>
+            <ul id="perfActionList" class="space-y-1 text-[11px] text-slate-700 list-disc list-inside font-medium leading-relaxed">
+            </ul>
+          </div>
+          <div class="bg-white/80 rounded-lg p-3 border border-amber-200/60 space-y-1.5">
+            <span class="font-bold text-amber-900 flex items-center gap-1">
+              <i data-lucide="building-2" class="w-3.5 h-3.5 text-blue-600"></i>
+              【体制面】薬局設備・協定の整備状況
+            </span>
+            <ul id="structActionList" class="space-y-1 text-[11px] text-slate-700 list-disc list-inside font-medium leading-relaxed">
+            </ul>
+          </div>
         </div>
       </div>
 
-      <!-- Requirements Progress Cards Grid -->
-      <div>
-        <div class="flex justify-between items-center mb-2 sm:mb-3">
-          <h3 class="text-sm sm:text-base font-bold text-slate-800 flex items-center gap-1.5 sm:gap-2">
-            <i data-lucide="check-circle-2" class="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600"></i>
-            施設基準・要件別メーター
-          </h3>
-          <button onclick="toggleSimulatorDrawer()" class="text-[11px] sm:text-xs bg-white hover:bg-slate-50 text-slate-700 px-2.5 py-1 rounded-lg border border-slate-300 font-semibold flex items-center gap-1 shadow-sm">
+      <!-- SECTION 1: 実績要件 -->
+      <div class="space-y-2.5">
+        <div class="flex justify-between items-end border-b border-slate-200 pb-2">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded-full">区分 1</span>
+              <h3 class="text-sm sm:text-base font-black text-slate-900 flex items-center gap-1.5">
+                <i data-lucide="trending-up" class="w-4 h-4 text-emerald-600"></i>
+                実績要件メーター（直近1年間の累積・調剤実績）
+              </h3>
+            </div>
+            <p class="text-[10px] sm:text-xs text-slate-500 mt-0.5">※ レセコン等から自動集計される日々の算定実績項目です。</p>
+          </div>
+          <button onclick="toggleSimulatorDrawer(true)" class="text-[11px] sm:text-xs bg-white hover:bg-slate-50 text-slate-700 px-2.5 py-1 rounded-lg border border-slate-300 font-semibold flex items-center gap-1 shadow-sm shrink-0">
             <i data-lucide="sliders" class="w-3 h-3 text-slate-500"></i>
             <span>シミュレーション</span>
           </button>
         </div>
 
-        <div id="requirementsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-4">
-          <!-- JSで動的レンダリング -->
+        <div id="perfRequirementsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-4">
         </div>
       </div>
 
-      <!-- Historical Chart -->
-      <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-5">
+      <!-- SECTION 2: 体制要件 -->
+      <div class="space-y-2.5 pt-2">
+        <div class="border-b border-slate-200 pb-2">
+          <div class="flex items-center gap-2">
+            <span class="px-2 py-0.5 bg-blue-100 text-blue-800 text-[10px] font-bold rounded-full">区分 2</span>
+            <h3 class="text-sm sm:text-base font-black text-slate-900 flex items-center gap-1.5">
+              <i data-lucide="building-2" class="w-4 h-4 text-blue-600"></i>
+              体制・設備要件チェック（薬局の届出・基盤設備）
+            </h3>
+          </div>
+          <p class="text-[10px] sm:text-xs text-slate-500 mt-0.5">※ 一度整備・締結すれば基本的にクリアを維持できる要件です。</p>
+        </div>
+
+        <div id="structRequirementsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-4">
+        </div>
+      </div>
+
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-5 mt-4">
         <div class="flex justify-between items-center mb-3">
           <div>
             <h4 class="text-xs sm:text-sm font-bold text-slate-800">月別算定実績の推移（直近12ヶ月）</h4>
-            <p class="text-[10px] sm:text-xs text-slate-500">在宅訪問、かかりつけ指導、情報提供料</p>
+            <p class="text-[10px] sm:text-xs text-slate-500">在宅訪問、かかりつけ指導、情報提供料の推移</p>
           </div>
-          <span class="text-[10px] sm:text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-medium">推移グラフ</span>
+          <span class="text-[10px] sm:text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-medium">月次トレンド</span>
         </div>
-        <div class="h-52 sm:h-64">
+        <div class="h-48 sm:h-64">
           <canvas id="metricsChart"></canvas>
         </div>
       </div>
 
-      <!-- Simulator / Settings Modal (Accessible from anywhere) -->
-  <div id="simulatorDrawer" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto">
-    <div class="bg-white w-full max-w-2xl rounded-t-2xl sm:rounded-2xl shadow-2xl border border-slate-200 p-5 sm:p-6 space-y-4 max-h-[90vh] overflow-y-auto transform transition-all">
-      <div class="flex justify-between items-center border-b pb-3 sticky top-0 bg-white z-10">
-        <div>
-          <h4 class="text-base font-bold text-slate-900 flex items-center gap-2">
-            <i data-lucide="sliders-horizontal" class="w-5 h-5 text-emerald-600"></i>
-            薬局データ ＆ 実績シミュレーション設定
-          </h4>
-          <p class="text-[11px] sm:text-xs text-slate-500">変更内容は自動で再計算・保存されます。</p>
-        </div>
-        <button type="button" onclick="toggleSimulatorDrawer()" class="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-700">
-          <i data-lucide="x" class="w-5 h-5"></i>
-        </button>
-      </div>
-
-      <form id="metricsForm" onsubmit="handleSaveMetrics(event)" class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-xs">
-        <div>
-          <label class="block font-bold text-slate-700 mb-1">薬局名称</label>
-          <input type="text" id="inputPharmacyName" class="w-full rounded-lg border border-slate-300 p-2.5 bg-white text-slate-900 font-semibold focus:ring-2 focus:ring-emerald-500 outline-none">
-        </div>
-        <div>
-          <label class="block font-bold text-slate-700 mb-1">調剤基本料区分</label>
-          <select id="inputBasicFeeType" class="w-full rounded-lg border border-slate-300 p-2.5 bg-white text-slate-900 font-semibold focus:ring-2 focus:ring-emerald-500 outline-none">
-            <option value="basic_1">調剤基本料1</option>
-            <option value="other">調剤基本料1以外（特別調剤等）</option>
-          </select>
-        </div>
-        <div>
-          <label class="block font-bold text-slate-700 mb-1">月平均処方箋枚数</label>
-          <input type="number" id="inputMonthlyRx" class="w-full rounded-lg border border-slate-300 p-2.5 bg-white text-slate-900 font-semibold focus:ring-2 focus:ring-emerald-500 outline-none">
-        </div>
-        <div>
-          <label class="block font-bold text-slate-700 mb-1">麻薬調剤実績（年間回数）</label>
-          <input type="number" id="inputNarcotics" class="w-full rounded-lg border border-slate-300 p-2.5 bg-white text-slate-900 font-semibold focus:ring-2 focus:ring-emerald-500 outline-none">
-        </div>
-        <div>
-          <label class="block font-bold text-slate-700 mb-1">在宅訪問指導実績（年間回数）</label>
-          <input type="number" id="inputHomeVisit" class="w-full rounded-lg border border-slate-300 p-2.5 bg-white text-slate-900 font-semibold focus:ring-2 focus:ring-emerald-500 outline-none">
-        </div>
-        <div>
-          <label class="block font-bold text-slate-700 mb-1">かかりつけ指導実績（年間回数）</label>
-          <input type="number" id="inputFamilyPharm" class="w-full rounded-lg border border-slate-300 p-2.5 bg-white text-slate-900 font-semibold focus:ring-2 focus:ring-emerald-500 outline-none">
-        </div>
-        <div>
-          <label class="block font-bold text-slate-700 mb-1">服薬情報等提供料（年間回数）</label>
-          <input type="number" id="inputInfoProv" class="w-full rounded-lg border border-slate-300 p-2.5 bg-white text-slate-900 font-semibold focus:ring-2 focus:ring-emerald-500 outline-none">
-        </div>
-        <div>
-          <label class="block font-bold text-slate-700 mb-1">プレアボイド事例報告（年間件数）</label>
-          <input type="number" id="inputPreavoid" class="w-full rounded-lg border border-slate-300 p-2.5 bg-white text-slate-900 font-semibold focus:ring-2 focus:ring-emerald-500 outline-none">
-        </div>
-        <div>
-          <label class="block font-bold text-slate-700 mb-1">後発医薬品使用割合 (%)</label>
-          <input type="number" step="0.1" id="inputGeneric" class="w-full rounded-lg border border-slate-300 p-2.5 bg-white text-slate-900 font-semibold focus:ring-2 focus:ring-emerald-500 outline-none">
-        </div>
-        <div>
-          <label class="block font-bold text-slate-700 mb-1">備蓄医薬品品目数</label>
-          <input type="number" id="inputStockDrugs" class="w-full rounded-lg border border-slate-300 p-2.5 bg-white text-slate-900 font-semibold focus:ring-2 focus:ring-emerald-500 outline-none">
-        </div>
-
-        <div class="sm:col-span-2 pt-3 flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
-          <button type="button" onclick="resetToDefaultMetrics()" class="w-full sm:w-auto px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-center">初期値に戻す</button>
-          <button type="submit" class="w-full sm:w-auto px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg shadow-md flex items-center justify-center gap-1.5">
-            <i data-lucide="save" class="w-4 h-4"></i>
-            <span>設定を保存して再計算</span>
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
-
     </section>
 
-    <!-- ========================================== -->
     <!-- TAB 2: 個別患者 加算ナビゲーター -->
-    <!-- ========================================== -->
     <section id="tab-patient" class="tab-content hidden space-y-4">
-      
-      <!-- Mobile Floating Total Points Bar -->
       <div class="sticky top-14 sm:top-20 z-30 bg-gradient-to-r from-emerald-800 to-teal-900 text-white rounded-xl p-3.5 sm:p-5 shadow-md flex flex-row items-center justify-between gap-2">
         <div>
           <span class="text-[10px] sm:text-xs text-emerald-200 uppercase font-semibold">算定可能な個別加算</span>
@@ -284,22 +227,14 @@
             <span id="patientTotalYen" class="text-[10px] sm:text-xs font-normal text-emerald-200 ml-1">(1割: 0円 / 3割: 0円)</span>
           </div>
         </div>
-        <div id="regionalContribBadges" class="flex flex-wrap justify-end gap-1">
-          <!-- JSで地域支援への貢献バッジを挿入 -->
-        </div>
+        <div id="regionalContribBadges" class="flex flex-wrap justify-end gap-1"></div>
       </div>
 
-      <!-- Advice Comments -->
-      <div id="patientAdviceCard" class="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-xs text-emerald-900 space-y-1">
-        <!-- JSでアドバイス挿入 -->
-      </div>
+      <div id="patientAdviceCard" class="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-xs text-emerald-900 space-y-1"></div>
 
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
-        
-        <!-- Left: Patient Condition Form (5 cols on desktop, full width on mobile) -->
         <div class="lg:col-span-5 space-y-3">
           <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 space-y-3.5">
-            
             <div class="flex justify-between items-center border-b pb-2">
               <h4 class="text-xs sm:text-sm font-bold text-slate-800 flex items-center gap-1.5">
                 <i data-lucide="check-square" class="w-4 h-4 text-emerald-600"></i>
@@ -311,7 +246,6 @@
               </button>
             </div>
 
-            <!-- Age & Notebook -->
             <div class="grid grid-cols-2 gap-2.5">
               <div class="bg-slate-50 p-2 rounded-lg border border-slate-200">
                 <label class="block text-[10px] font-bold text-slate-600 mb-0.5">患者年齢</label>
@@ -326,7 +260,6 @@
               </label>
             </div>
 
-            <!-- Basic Agrees -->
             <div class="space-y-1.5">
               <label class="flex items-center gap-2.5 text-xs font-bold text-slate-800 p-2.5 rounded-lg border border-slate-200 bg-white hover:bg-emerald-50/40 cursor-pointer active:bg-emerald-100 transition">
                 <input type="checkbox" id="pFamily" onchange="triggerPatientEval()" class="w-4 h-4 text-emerald-600 rounded">
@@ -338,11 +271,9 @@
               </label>
             </div>
 
-            <!-- Drug Category Conditions -->
             <div class="pt-1">
               <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">処方薬の特性</span>
               <div class="space-y-1.5 text-xs">
-                
                 <label class="flex items-start gap-2.5 p-2.5 rounded-lg border border-slate-200 bg-white hover:bg-emerald-50/40 cursor-pointer active:bg-emerald-100 transition">
                   <input type="checkbox" id="pNarcotics" onchange="triggerPatientEval()" class="w-4 h-4 text-emerald-600 rounded mt-0.5">
                   <div>
@@ -350,7 +281,6 @@
                     <span class="text-[10px] text-slate-500">オキシコドン、フェンタニル、モルヒネ等</span>
                   </div>
                 </label>
-
                 <label class="flex items-start gap-2.5 p-2.5 rounded-lg border border-slate-200 bg-white hover:bg-emerald-50/40 cursor-pointer active:bg-emerald-100 transition">
                   <input type="checkbox" id="pHighRisk" checked onchange="triggerPatientEval()" class="w-4 h-4 text-emerald-600 rounded mt-0.5">
                   <div>
@@ -358,7 +288,6 @@
                     <span class="text-[10px] text-slate-500">抗血栓、抗不整脈、抗てんかん、免疫抑制剤等</span>
                   </div>
                 </label>
-
                 <label class="flex items-start gap-2.5 p-2.5 rounded-lg border border-slate-200 bg-white hover:bg-emerald-50/40 cursor-pointer active:bg-emerald-100 transition">
                   <input type="checkbox" id="pCancer" onchange="triggerPatientEval()" class="w-4 h-4 text-emerald-600 rounded mt-0.5">
                   <div>
@@ -366,7 +295,6 @@
                     <span class="text-[10px] text-slate-500">レジメン管理・副作用モニタリング</span>
                   </div>
                 </label>
-
                 <label class="flex items-start gap-2.5 p-2.5 rounded-lg border border-slate-200 bg-white hover:bg-emerald-50/40 cursor-pointer active:bg-emerald-100 transition">
                   <input type="checkbox" id="pInhale" onchange="toggleInhaleChild(); triggerPatientEval()" class="w-4 h-4 text-emerald-600 rounded mt-0.5">
                   <div class="flex-1">
@@ -382,7 +310,6 @@
               </div>
             </div>
 
-            <!-- Pharmacist Actions -->
             <div class="pt-1">
               <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">薬剤師の介入・業務</span>
               <div class="space-y-1.5 text-xs">
@@ -393,7 +320,6 @@
                     <span class="text-[10px] text-slate-500">調剤後、電話等で効果・副作用を確認</span>
                   </div>
                 </label>
-
                 <label class="flex items-start gap-2.5 p-2.5 rounded-lg border border-slate-200 bg-white hover:bg-emerald-50/40 cursor-pointer active:bg-emerald-100 transition">
                   <input type="checkbox" id="pLeftover" onchange="triggerPatientEval()" class="w-4 h-4 text-emerald-600 rounded mt-0.5">
                   <div>
@@ -401,7 +327,6 @@
                     <span class="text-[10px] text-slate-500">残薬整理・処方医への連絡調整</span>
                   </div>
                 </label>
-
                 <label class="flex items-start gap-2.5 p-2.5 rounded-lg border border-slate-200 bg-white hover:bg-emerald-50/40 cursor-pointer active:bg-emerald-100 transition">
                   <input type="checkbox" id="pTraceReport" onchange="triggerPatientEval()" class="w-4 h-4 text-emerald-600 rounded mt-0.5">
                   <div>
@@ -411,35 +336,22 @@
                 </label>
               </div>
             </div>
-
           </div>
         </div>
 
-        <!-- Right: Billing Suggestions List (7 cols on desktop) -->
         <div class="lg:col-span-7 space-y-3">
-          
           <div class="flex justify-between items-center">
             <h4 class="text-xs sm:text-sm font-bold text-slate-800">算定できる加算一覧 ＆ 薬歴記載の要点</h4>
             <span id="patientItemCount" class="text-[11px] text-slate-500 font-medium">0 件ヒット</span>
           </div>
-
-          <div id="patientBillingCards" class="space-y-2.5">
-            <!-- JSでカードレンダリング -->
-          </div>
-
+          <div id="patientBillingCards" class="space-y-2.5"></div>
         </div>
-
       </div>
-
     </section>
 
-    <!-- ========================================== -->
     <!-- TAB 3: 朝の出勤時サマリー印刷シート -->
-    <!-- ========================================== -->
     <section id="tab-report" class="tab-content hidden">
       <div class="bg-white rounded-xl shadow-md border border-slate-200 p-4 sm:p-8 max-w-4xl mx-auto print:p-0 print:border-none print:shadow-none">
-        
-        <!-- Print Header -->
         <div class="border-b-2 border-slate-800 pb-3 sm:pb-4 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2">
           <div>
             <div class="text-[10px] sm:text-xs text-slate-500 font-bold uppercase tracking-wider">施設基準 デイリー進捗レポート</div>
@@ -451,67 +363,201 @@
           </div>
         </div>
 
-        <!-- Executive Summary Grid -->
         <div class="grid grid-cols-3 gap-2 sm:gap-4 my-3 sm:my-5">
           <div class="border border-slate-300 rounded-lg p-2 sm:p-3 text-center bg-slate-50">
-            <div class="text-[10px] sm:text-xs text-slate-600 font-semibold">現在の加算</div>
+            <div class="text-[10px] sm:text-xs text-slate-600 font-semibold">地域支援体制加算</div>
             <div class="text-sm sm:text-lg font-black text-emerald-700 mt-0.5" id="repTier">--</div>
             <div class="text-[9px] sm:text-[11px] text-slate-500"><span id="repPoints">--</span>点/枚</div>
           </div>
           <div class="border border-slate-300 rounded-lg p-2 sm:p-3 text-center bg-slate-50">
-            <div class="text-[10px] sm:text-xs text-slate-600 font-semibold">供給対応加算</div>
+            <div class="text-[10px] sm:text-xs text-slate-600 font-semibold">供給対応体制加算</div>
             <div class="text-sm sm:text-lg font-black text-blue-700 mt-0.5" id="repSupply">--</div>
             <div class="text-[9px] sm:text-[11px] text-slate-500">備蓄 <span id="repStock">--</span>品目</div>
           </div>
           <div class="border border-slate-300 rounded-lg p-2 sm:p-3 text-center bg-slate-50">
-            <div class="text-[10px] sm:text-xs text-slate-600 font-semibold">後発品割合</div>
+            <div class="text-[10px] sm:text-xs text-slate-600 font-semibold">後発医薬品割合</div>
             <div class="text-sm sm:text-lg font-black text-slate-800 mt-0.5" id="repGeneric">--%</div>
             <div class="text-[9px] sm:text-[11px] text-slate-500">基準: 80%以上</div>
           </div>
         </div>
 
-        <!-- Today Focus Target -->
         <div class="border-2 border-amber-400 bg-amber-50/70 rounded-lg p-3 sm:p-4 mb-4">
           <h4 class="text-[11px] sm:text-xs font-bold text-amber-900 uppercase flex items-center gap-1.5 mb-1">
             <i data-lucide="target" class="w-4 h-4 text-amber-600"></i>
             本日の最優先フォーカス項目（チーム共有）
           </h4>
-          <ul id="reportFocusList" class="text-[11px] sm:text-xs text-amber-950 space-y-1 list-disc list-inside font-medium leading-relaxed">
-          </ul>
+          <ul id="reportFocusList" class="text-[11px] sm:text-xs text-amber-950 space-y-1 list-disc list-inside font-medium leading-relaxed"></ul>
         </div>
 
-        <!-- Detail Table (Horizontal Scroll on Mobile) -->
+        <!-- Detail Table 1: 実績要件 -->
         <div class="mb-4 overflow-x-auto">
-          <h4 class="text-[11px] sm:text-xs font-bold text-slate-800 uppercase tracking-wider mb-1.5">直近12ヶ月 要件達成度ステータス</h4>
+          <h4 class="text-[11px] sm:text-xs font-bold text-slate-800 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+            <span class="px-1.5 py-0.2 bg-emerald-100 text-emerald-800 rounded font-black text-[10px]">実績要件</span>
+            <span>直近12ヶ月の累積実績進捗</span>
+          </h4>
           <table class="w-full text-[11px] sm:text-xs text-left border-collapse border border-slate-200 min-w-[500px]">
             <thead>
               <tr class="bg-slate-100 text-slate-700">
                 <th class="border border-slate-200 p-1.5 sm:p-2 font-bold">要件項目</th>
-                <th class="border border-slate-200 p-1.5 sm:p-2 text-center font-bold">実績</th>
-                <th class="border border-slate-200 p-1.5 sm:p-2 text-center font-bold">目標</th>
-                <th class="border border-slate-200 p-1.5 sm:p-2 text-center font-bold">達成率</th>
+                <th class="border border-slate-200 p-1.5 sm:p-2 text-center font-bold">現在実績</th>
+                <th class="border border-slate-200 p-1.5 sm:p-2 text-center font-bold">目標基準</th>
+                <th class="border border-slate-200 p-1.5 sm:p-2 text-center font-bold">進捗率</th>
                 <th class="border border-slate-200 p-1.5 sm:p-2 text-center font-bold">判定</th>
                 <th class="border border-slate-200 p-1.5 sm:p-2 font-bold">現場アクション</th>
               </tr>
             </thead>
-            <tbody id="reportTableBody">
-              <!-- JSで動的生成 -->
-            </tbody>
+            <tbody id="reportPerfTableBody"></tbody>
           </table>
         </div>
 
-        <!-- Print Action Button for Mobile -->
+        <!-- Detail Table 2: 体制要件 -->
+        <div class="mb-4 overflow-x-auto">
+          <h4 class="text-[11px] sm:text-xs font-bold text-slate-800 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+            <span class="px-1.5 py-0.2 bg-blue-100 text-blue-800 rounded font-black text-[10px]">体制要件</span>
+            <span>薬局設備・協定の整備状況</span>
+          </h4>
+          <table class="w-full text-[11px] sm:text-xs text-left border-collapse border border-slate-200 min-w-[500px]">
+            <thead>
+              <tr class="bg-slate-100 text-slate-700">
+                <th class="border border-slate-200 p-1.5 sm:p-2 font-bold">体制項目</th>
+                <th class="border border-slate-200 p-1.5 sm:p-2 text-center font-bold">現況</th>
+                <th class="border border-slate-200 p-1.5 sm:p-2 text-center font-bold">必要基準</th>
+                <th class="border border-slate-200 p-1.5 sm:p-2 text-center font-bold">判定</th>
+                <th class="border border-slate-200 p-1.5 sm:p-2 font-bold">対応方針</th>
+              </tr>
+            </thead>
+            <tbody id="reportStructTableBody"></tbody>
+          </table>
+        </div>
+
         <div class="mt-4 flex justify-end gap-2 print:hidden">
           <button onclick="window.print()" class="w-full sm:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-sm flex items-center justify-center gap-1.5">
             <i data-lucide="printer" class="w-4 h-4"></i>
             <span>このレポートを印刷する</span>
           </button>
         </div>
-
       </div>
     </section>
-
   </main>
+
+  <!-- Simulator / Settings Modal -->
+  <div id="simulatorDrawer" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto">
+    <div class="bg-white w-full max-w-2xl rounded-t-2xl sm:rounded-2xl shadow-2xl border border-slate-200 p-5 sm:p-6 space-y-4 max-h-[90vh] overflow-y-auto transform transition-all">
+      <div class="flex justify-between items-center border-b pb-3 sticky top-0 bg-white z-10">
+        <div>
+          <h4 class="text-base font-bold text-slate-900 flex items-center gap-2">
+            <i data-lucide="sliders-horizontal" class="w-5 h-5 text-emerald-600"></i>
+            薬局データ ＆ 実績シミュレーション設定
+          </h4>
+          <p class="text-[11px] sm:text-xs text-slate-500">変更内容は自動で再計算・保存されます。</p>
+        </div>
+        <button type="button" onclick="toggleSimulatorDrawer(false)" class="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-700">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form id="metricsForm" onsubmit="handleSaveMetrics(event)" class="space-y-4 text-xs">
+        <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-2.5">
+          <span class="font-bold text-slate-800 text-[11px] uppercase tracking-wider block">基本属性</span>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            <div>
+              <label class="block font-bold text-slate-700 mb-0.5">薬局名称</label>
+              <input type="text" id="inputPharmacyName" class="w-full rounded-lg border border-slate-300 p-2 bg-white text-slate-900 font-semibold focus:ring-2 focus:ring-emerald-500 outline-none">
+            </div>
+            <div>
+              <label class="block font-bold text-slate-700 mb-0.5">調剤基本料区分</label>
+              <select id="inputBasicFeeType" class="w-full rounded-lg border border-slate-300 p-2 bg-white text-slate-900 font-semibold focus:ring-2 focus:ring-emerald-500 outline-none">
+                <option value="basic_1">調剤基本料1</option>
+                <option value="other">調剤基本料1以外</option>
+              </select>
+            </div>
+            <div>
+              <label class="block font-bold text-slate-700 mb-0.5">月平均処方箋枚数</label>
+              <input type="number" id="inputMonthlyRx" class="w-full rounded-lg border border-slate-300 p-2 bg-white text-slate-900 font-semibold focus:ring-2 focus:ring-emerald-500 outline-none">
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-emerald-50/50 p-3 rounded-xl border border-emerald-200/70 space-y-2.5">
+          <span class="font-bold text-emerald-900 text-[11px] uppercase tracking-wider block">📊 実績要件の数値（直近12ヶ月）</span>
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+            <div>
+              <label class="block font-bold text-slate-700 mb-0.5">麻薬調剤実績(回)</label>
+              <input type="number" id="inputNarcotics" class="w-full rounded-lg border border-slate-300 p-2 bg-white text-slate-900 font-semibold focus:ring-2 focus:ring-emerald-500 outline-none">
+            </div>
+            <div>
+              <label class="block font-bold text-slate-700 mb-0.5">在宅訪問実績(回)</label>
+              <input type="number" id="inputHomeVisit" class="w-full rounded-lg border border-slate-300 p-2 bg-white text-slate-900 font-semibold focus:ring-2 focus:ring-emerald-500 outline-none">
+            </div>
+            <div>
+              <label class="block font-bold text-slate-700 mb-0.5">かかりつけ実績(回)</label>
+              <input type="number" id="inputFamilyPharm" class="w-full rounded-lg border border-slate-300 p-2 bg-white text-slate-900 font-semibold focus:ring-2 focus:ring-emerald-500 outline-none">
+            </div>
+            <div>
+              <label class="block font-bold text-slate-700 mb-0.5">情報提供料(回)</label>
+              <input type="number" id="inputInfoProv" class="w-full rounded-lg border border-slate-300 p-2 bg-white text-slate-900 font-semibold focus:ring-2 focus:ring-emerald-500 outline-none">
+            </div>
+            <div>
+              <label class="block font-bold text-slate-700 mb-0.5">プレアボイド(件)</label>
+              <input type="number" id="inputPreavoid" class="w-full rounded-lg border border-slate-300 p-2 bg-white text-slate-900 font-semibold focus:ring-2 focus:ring-emerald-500 outline-none">
+            </div>
+            <div>
+              <label class="block font-bold text-slate-700 mb-0.5">後発品割合(%)</label>
+              <input type="number" step="0.1" id="inputGeneric" class="w-full rounded-lg border border-slate-300 p-2 bg-white text-slate-900 font-semibold focus:ring-2 focus:ring-emerald-500 outline-none">
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-blue-50/50 p-3 rounded-xl border border-blue-200/70 space-y-2.5">
+          <span class="font-bold text-blue-900 text-[11px] uppercase tracking-wider block">🏢 体制・設備要件チェック</span>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div>
+              <label class="block font-bold text-slate-700 mb-0.5">備蓄医薬品品目数</label>
+              <input type="number" id="inputStockDrugs" class="w-full rounded-lg border border-slate-300 p-2 bg-white text-slate-900 font-semibold focus:ring-2 focus:ring-emerald-500 outline-none">
+            </div>
+            <div class="flex items-center pt-3">
+              <label class="flex items-center gap-2 cursor-pointer font-bold text-slate-800">
+                <input type="checkbox" id="inputHas24h" class="w-4 h-4 text-emerald-600 rounded">
+                <span>24時間調剤・在宅体制あり</span>
+              </label>
+            </div>
+            <div>
+              <label class="flex items-center gap-2 cursor-pointer font-bold text-slate-800">
+                <input type="checkbox" id="inputHasInfection" class="w-4 h-4 text-emerald-600 rounded">
+                <span>感染症連携協定締結済</span>
+              </label>
+            </div>
+            <div>
+              <label class="flex items-center gap-2 cursor-pointer font-bold text-slate-800">
+                <input type="checkbox" id="inputHasOnline" class="w-4 h-4 text-emerald-600 rounded">
+                <span>オンライン資格確認導入済</span>
+              </label>
+            </div>
+            <div>
+              <label class="flex items-center gap-2 cursor-pointer font-bold text-slate-800">
+                <input type="checkbox" id="inputHasEPrescription" class="w-4 h-4 text-emerald-600 rounded">
+                <span>電子処方箋受付体制あり</span>
+              </label>
+            </div>
+            <div>
+              <label class="flex items-center gap-2 cursor-pointer font-bold text-slate-800">
+                <input type="checkbox" id="inputHasOtc" class="w-4 h-4 text-emerald-600 rounded">
+                <span>要指導/OTC医薬品備蓄販売</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="pt-2 flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
+          <button type="button" onclick="resetToDefaultMetrics()" class="w-full sm:w-auto px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-center">初期値に戻す</button>
+          <button type="submit" class="w-full sm:w-auto px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg shadow-md flex items-center justify-center gap-1.5">
+            <i data-lucide="save" class="w-4 h-4"></i>
+            <span>設定を保存して再計算</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
 
   <script src="/static/js/app.js"></script>
 </body>

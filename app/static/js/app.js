@@ -1,20 +1,18 @@
-// PharmaSupport AI Frontend Script (Mobile & Desktop Responsive)
+// PharmaSupport AI Frontend Script (Performance & Structural Requirements Split)
 
 let currentMetrics = null;
 let regionalResult = null;
 let metricsChart = null;
 
-// Tab Management (Supporting Desktop & Mobile Bottom Nav)
+// Tab Management
 function switchTab(tabId) {
   document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
   
-  // Desktop Tab Buttons
   document.querySelectorAll('.tab-btn').forEach(el => {
     el.classList.remove('border-white', 'text-white');
     el.classList.add('border-transparent', 'text-emerald-200');
   });
   
-  // Mobile Tab Buttons
   document.querySelectorAll('.m-tab-btn').forEach(el => {
     el.classList.remove('text-emerald-700', 'font-bold');
     el.classList.add('text-slate-500', 'font-medium');
@@ -25,18 +23,15 @@ function switchTab(tabId) {
   const targetMBtn = document.getElementById('m-tab-btn-' + tabId);
 
   if (targetTab) targetTab.classList.remove('hidden');
-  
   if (targetBtn) {
     targetBtn.classList.remove('border-transparent', 'text-emerald-200');
     targetBtn.classList.add('border-white', 'text-white');
   }
-  
   if (targetMBtn) {
     targetMBtn.classList.remove('text-slate-500', 'font-medium');
     targetMBtn.classList.add('text-emerald-700', 'font-bold');
   }
 
-  // Scroll to top on tab switch
   window.scrollTo({ top: 0, behavior: 'smooth' });
 
   if (tabId === 'report') {
@@ -49,21 +44,15 @@ function switchTab(tabId) {
 function toggleSimulatorDrawer(forceState) {
   const drawer = document.getElementById('simulatorDrawer');
   if (!drawer) return;
-  
   if (typeof forceState === 'boolean') {
-    if (forceState) {
-      drawer.classList.remove('hidden');
-    } else {
-      drawer.classList.add('hidden');
-    }
+    if (forceState) drawer.classList.remove('hidden');
+    else drawer.classList.add('hidden');
   } else {
     drawer.classList.toggle('hidden');
   }
-  
   lucide.createIcons();
 }
 
-// Close modal when clicking background overlay
 document.addEventListener('click', (e) => {
   const drawer = document.getElementById('simulatorDrawer');
   if (drawer && e.target === drawer) {
@@ -113,8 +102,15 @@ function populateMetricsForm(m) {
   document.getElementById('inputGeneric').value = m.generic_percentage;
   document.getElementById('inputStockDrugs').value = m.stock_drugs_count;
 
+  // Checkboxes
+  document.getElementById('inputHas24h').checked = !!m.has_24h_system;
+  document.getElementById('inputHasInfection').checked = !!m.has_infection_system;
+  document.getElementById('inputHasOnline').checked = !!m.has_online_qualification;
+  document.getElementById('inputHasEPrescription').checked = !!m.has_electronic_prescription;
+  document.getElementById('inputHasOtc').checked = !!m.has_otc_sales;
+
   document.getElementById('statMonthlyRx').innerText = m.monthly_prescriptions.toLocaleString();
-  document.getElementById('statStockDrugs').innerText = m.stock_drugs_count.toLocaleString();
+  document.getElementById('statStockDrugs').innerText = m.stock_drugs_count.toLocaleString() + ' 品目';
   document.getElementById('statGenericRate').innerText = m.generic_percentage.toFixed(1);
 }
 
@@ -157,21 +153,37 @@ function renderRegionalDashboard(result, metrics) {
   const annualYen = metrics.monthly_prescriptions * 12 * result.points_earned * 10;
   document.getElementById('annualRevenueEst').innerText = `¥ ${annualYen.toLocaleString()}`;
 
-  // 4. Advices Banner
+  // 4. Advices Banner (Split into Perf & Struct)
   document.getElementById('summaryMsgText').innerText = result.summary_message;
-  const listEl = document.getElementById('priorityActionList');
-  listEl.innerHTML = '';
-  result.priority_actions.forEach(act => {
-    const li = document.createElement('li');
-    li.innerText = act;
-    listEl.appendChild(li);
-  });
+  
+  const perfList = document.getElementById('perfActionList');
+  perfList.innerHTML = '';
+  if (result.performance_actions.length === 0) {
+    perfList.innerHTML = '<li class="text-emerald-700 font-bold">全実績基準をクリア中！</li>';
+  } else {
+    result.performance_actions.forEach(act => {
+      const li = document.createElement('li');
+      li.innerText = act;
+      perfList.appendChild(li);
+    });
+  }
 
-  // 5. Requirements Cards
-  const grid = document.getElementById('requirementsGrid');
-  grid.innerHTML = '';
+  const structList = document.getElementById('structActionList');
+  structList.innerHTML = '';
+  if (result.structural_actions.length === 0) {
+    structList.innerHTML = '<li class="text-emerald-700 font-bold">全体制・設備要件をクリア中！</li>';
+  } else {
+    result.structural_actions.forEach(act => {
+      const li = document.createElement('li');
+      li.innerText = act;
+      structList.appendChild(li);
+    });
+  }
 
-  result.requirements.forEach(req => {
+  // 5. Performance Requirements Grid (実績要件)
+  const perfGrid = document.getElementById('perfRequirementsGrid');
+  perfGrid.innerHTML = '';
+  result.performance_requirements.forEach(req => {
     const isOk = req.is_satisfied;
     const progress = Math.min(100, Math.max(0, req.progress_percentage));
     
@@ -179,22 +191,21 @@ function renderRegionalDashboard(result, metrics) {
     card.className = `bg-white rounded-xl shadow-sm border ${isOk ? 'border-slate-200' : 'border-amber-300 bg-amber-50/20'} p-3.5 sm:p-4 flex flex-col justify-between`;
     card.innerHTML = `
       <div>
-        <div class="flex justify-between items-start mb-1.5 sm:mb-2">
+        <div class="flex justify-between items-start mb-1.5">
           <div>
             <span class="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider">${req.category}</span>
             <h4 class="text-xs sm:text-sm font-bold text-slate-900 leading-snug">${req.name}</h4>
           </div>
           <span class="text-[10px] sm:text-xs px-2 py-0.5 rounded-full font-bold ${isOk ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-800'}">
-            ${isOk ? '達成' : `不足:${req.shortage}${req.unit}`}
+            ${isOk ? '達成' : req.shortage_text}
           </span>
         </div>
 
         <div class="mt-2 flex items-baseline justify-between text-xs mb-1">
-          <span class="font-bold text-slate-800 text-sm sm:text-base">${req.current_value} <span class="text-[10px] sm:text-xs font-normal text-slate-500">${req.unit}</span></span>
-          <span class="text-slate-400 text-[10px] sm:text-xs">目標: ${req.target_value} ${req.unit}</span>
+          <span class="font-bold text-slate-800 text-sm sm:text-base">${req.current_value_text}</span>
+          <span class="text-slate-400 text-[10px] sm:text-xs">目標: ${req.target_value_text}</span>
         </div>
 
-        <!-- Progress Bar -->
         <div class="w-full bg-slate-100 rounded-full h-1.5 sm:h-2 overflow-hidden mb-1.5">
           <div class="h-full rounded-full transition-all duration-500 ${isOk ? 'bg-emerald-500' : 'bg-amber-500'}" style="width: ${progress}%"></div>
         </div>
@@ -204,7 +215,40 @@ function renderRegionalDashboard(result, metrics) {
         <strong class="text-slate-700">指針:</strong> ${req.advice}
       </p>
     `;
-    grid.appendChild(card);
+    perfGrid.appendChild(card);
+  });
+
+  // 6. Structural Requirements Grid (体制要件)
+  const structGrid = document.getElementById('structRequirementsGrid');
+  structGrid.innerHTML = '';
+  result.structural_requirements.forEach(req => {
+    const isOk = req.is_satisfied;
+    
+    const card = document.createElement('div');
+    card.className = `bg-white rounded-xl shadow-sm border ${isOk ? 'border-slate-200' : 'border-blue-300 bg-blue-50/20'} p-3.5 sm:p-4 flex flex-col justify-between`;
+    card.innerHTML = `
+      <div>
+        <div class="flex justify-between items-start mb-1.5">
+          <div>
+            <span class="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider">${req.category}</span>
+            <h4 class="text-xs sm:text-sm font-bold text-slate-900 leading-snug">${req.name}</h4>
+          </div>
+          <span class="text-[10px] sm:text-xs px-2 py-0.5 rounded-full font-bold ${isOk ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-800'}">
+            ${isOk ? 'クリア' : '要整備'}
+          </span>
+        </div>
+
+        <div class="mt-2 flex items-baseline justify-between text-xs mb-1">
+          <span class="font-bold text-slate-800 text-sm sm:text-base">${req.current_value_text}</span>
+          <span class="text-slate-400 text-[10px] sm:text-xs">基準: ${req.target_value_text}</span>
+        </div>
+      </div>
+
+      <p class="text-[10px] sm:text-[11px] text-slate-500 mt-1.5 pt-1.5 border-t border-slate-100 leading-normal">
+        <strong class="text-slate-700">対応:</strong> ${req.advice}
+      </p>
+    `;
+    structGrid.appendChild(card);
   });
 
   lucide.createIcons();
@@ -225,11 +269,11 @@ async function handleSaveMetrics(e) {
     generic_percentage: parseFloat(document.getElementById('inputGeneric').value) || 80.0,
     night_holiday_count: 120,
     stock_drugs_count: parseInt(document.getElementById('inputStockDrugs').value) || 1200,
-    has_24h_system: true,
-    has_infection_system: true,
-    has_online_qualification: true,
-    has_electronic_prescription: true,
-    has_otc_sales: true
+    has_24h_system: document.getElementById('inputHas24h').checked,
+    has_infection_system: document.getElementById('inputHasInfection').checked,
+    has_online_qualification: document.getElementById('inputHasOnline').checked,
+    has_electronic_prescription: document.getElementById('inputHasEPrescription').checked,
+    has_otc_sales: document.getElementById('inputHasOtc').checked
   };
 
   currentMetrics = updated;
@@ -242,7 +286,7 @@ async function handleSaveMetrics(e) {
   });
 
   await evaluateRegional(updated);
-  toggleSimulatorDrawer();
+  toggleSimulatorDrawer(false);
 }
 
 function resetToDefaultMetrics() {
@@ -362,13 +406,11 @@ function triggerPatientEval() {
 }
 
 function renderPatientBillingResult(result) {
-  // Total Points
   document.getElementById('patientTotalPts').innerText = `+${result.total_points}`;
   const yen1 = result.total_points * 10;
   const yen3 = result.total_points * 30;
   document.getElementById('patientTotalYen').innerText = `(1割: +${yen1}円 / 3割: +${yen3}円)`;
 
-  // Regional Contribution Badges
   const badgeContainer = document.getElementById('regionalContribBadges');
   badgeContainer.innerHTML = '';
   result.regional_contributions.forEach(badgeText => {
@@ -378,7 +420,6 @@ function renderPatientBillingResult(result) {
     badgeContainer.appendChild(span);
   });
 
-  // Advice Card
   const adviceCard = document.getElementById('patientAdviceCard');
   adviceCard.innerHTML = '';
   result.advice_comments.forEach(c => {
@@ -388,7 +429,6 @@ function renderPatientBillingResult(result) {
     adviceCard.appendChild(p);
   });
 
-  // Billing Items List
   const container = document.getElementById('patientBillingCards');
   container.innerHTML = '';
   document.getElementById('patientItemCount').innerText = `${result.recommended_items.length} 件算定可能`;
@@ -434,7 +474,6 @@ function renderPatientBillingResult(result) {
 
       ${contribBadgeHtml}
 
-      <!-- Chart Notes Box -->
       <div class="bg-slate-50 border border-slate-200 rounded-lg p-2 sm:p-2.5 text-xs">
         <div class="flex justify-between items-center mb-1">
           <span class="font-bold text-[10px] sm:text-xs text-slate-700 flex items-center gap-1">
@@ -500,24 +539,28 @@ function updateReportView() {
   // Focus list
   const focusList = document.getElementById('reportFocusList');
   focusList.innerHTML = '';
-  regionalResult.priority_actions.forEach(act => {
+  regionalResult.performance_actions.forEach(act => {
     const li = document.createElement('li');
     li.innerText = act;
     focusList.appendChild(li);
   });
+  if (regionalResult.performance_actions.length === 0) {
+    const li = document.createElement('li');
+    li.innerText = '全実績基準をクリア中！現在の算定ペースを維持しましょう。';
+    focusList.appendChild(li);
+  }
 
-  // Table rows
-  const tbody = document.getElementById('reportTableBody');
-  tbody.innerHTML = '';
-
-  regionalResult.requirements.forEach(req => {
+  // 1. Performance Requirements Table
+  const perfTbody = document.getElementById('reportPerfTableBody');
+  perfTbody.innerHTML = '';
+  regionalResult.performance_requirements.forEach(req => {
     const tr = document.createElement('tr');
     const isOk = req.is_satisfied;
     tr.className = isOk ? 'bg-white' : 'bg-amber-50/50';
     tr.innerHTML = `
       <td class="border border-slate-200 p-1.5 sm:p-2 font-bold text-slate-800">${req.name}</td>
-      <td class="border border-slate-200 p-1.5 sm:p-2 text-center">${req.current_value}${req.unit}</td>
-      <td class="border border-slate-200 p-1.5 sm:p-2 text-center text-slate-500">${req.target_value}${req.unit}</td>
+      <td class="border border-slate-200 p-1.5 sm:p-2 text-center">${req.current_value_text}</td>
+      <td class="border border-slate-200 p-1.5 sm:p-2 text-center text-slate-500">${req.target_value_text}</td>
       <td class="border border-slate-200 p-1.5 sm:p-2 text-center font-semibold">${req.progress_percentage}%</td>
       <td class="border border-slate-200 p-1.5 sm:p-2 text-center">
         <span class="px-1.5 py-0.5 rounded text-[9px] sm:text-[10px] font-bold ${isOk ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">
@@ -526,7 +569,28 @@ function updateReportView() {
       </td>
       <td class="border border-slate-200 p-1.5 sm:p-2 text-slate-600 leading-tight text-[10px] sm:text-xs">${req.advice}</td>
     `;
-    tbody.appendChild(tr);
+    perfTbody.appendChild(tr);
+  });
+
+  // 2. Structural Requirements Table
+  const structTbody = document.getElementById('reportStructTableBody');
+  structTbody.innerHTML = '';
+  regionalResult.structural_requirements.forEach(req => {
+    const tr = document.createElement('tr');
+    const isOk = req.is_satisfied;
+    tr.className = isOk ? 'bg-white' : 'bg-rose-50/50';
+    tr.innerHTML = `
+      <td class="border border-slate-200 p-1.5 sm:p-2 font-bold text-slate-800">${req.name}</td>
+      <td class="border border-slate-200 p-1.5 sm:p-2 text-center font-bold">${req.current_value_text}</td>
+      <td class="border border-slate-200 p-1.5 sm:p-2 text-center text-slate-500">${req.target_value_text}</td>
+      <td class="border border-slate-200 p-1.5 sm:p-2 text-center">
+        <span class="px-1.5 py-0.5 rounded text-[9px] sm:text-[10px] font-bold ${isOk ? 'bg-blue-100 text-blue-800' : 'bg-rose-100 text-rose-800'}">
+          ${isOk ? 'クリア' : '要整備'}
+        </span>
+      </td>
+      <td class="border border-slate-200 p-1.5 sm:p-2 text-slate-600 leading-tight text-[10px] sm:text-xs">${req.advice}</td>
+    `;
+    structTbody.appendChild(tr);
   });
 
   lucide.createIcons();

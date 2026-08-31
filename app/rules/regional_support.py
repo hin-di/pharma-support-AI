@@ -24,137 +24,200 @@ def get_default_metrics() -> PharmacyMetrics:
 def evaluate_regional_support(m: PharmacyMetrics) -> RegionalEvaluationResult:
     is_basic_1 = (m.dispensing_basic_fee_type == 'basic_1')
     
-    # 医薬品供給対応体制加算の判定（備蓄1200品目以上、後発品80%以上、24時間対応等）
-    supply_qualified = (
-        m.stock_drugs_count >= 1200 and
-        m.generic_percentage >= 80.0 and
-        m.has_24h_system and
-        m.has_online_qualification
-    )
+    # ----------------------------------------------------
+    # ① 実績要件（日々の現場アクションで積み上げる要件）
+    # ----------------------------------------------------
+    perf_reqs = []
     
-    # 連携強化加算の判定（感染症連携、OTC備蓄、電子処方箋等）
-    infection_qualified = (
-        m.has_infection_system and
-        m.has_otc_sales and
-        m.has_electronic_prescription
-    )
-    
-    # 個別要件リストの生成
-    reqs = []
-    
-    # 1. 麻薬調剤実績 (加算1基準: 1回, 加算2基準: 3回, 加算3/4基準: 10回)
-    target_narcotics = 1 if is_basic_1 else 10
-    narc_sat = m.narcotics_count >= target_narcotics
-    narc_short = max(0, target_narcotics - m.narcotics_count)
-    reqs.append(RequirementStatus(
+    # 1. 麻薬調剤実績
+    target_narc = 1 if is_basic_1 else 10
+    narc_sat = m.narcotics_count >= target_narc
+    narc_short = max(0, target_narc - m.narcotics_count)
+    perf_reqs.append(RequirementStatus(
         name='麻薬調剤実績',
         category='調剤実績',
-        current_value=float(m.narcotics_count),
-        target_value=float(target_narcotics),
-        unit='回/年',
+        requirement_type='performance',
+        current_value_text=f'{m.narcotics_count}回',
+        target_value_text=f'{target_narc}回/年',
+        unit='回',
         is_satisfied=narc_sat,
-        progress_percentage=min(100.0, round((m.narcotics_count / target_narcotics) * 100, 1)),
-        shortage=float(narc_short),
-        advice='麻薬処方患者が来局時は、麻薬管理指導加算（100点）の積極的な算定と薬歴記録を行いましょう。' if not narc_sat else '目標基準を達成しています。継続的な算定を維持しましょう。'
+        progress_percentage=min(100.0, round((m.narcotics_count / target_narc) * 100, 1)),
+        shortage_text=f'不足 {narc_short}回' if not narc_sat else None,
+        advice='麻薬処方時は麻薬管理指導加算（100点）の積極的な算定と薬歴管理を行いましょう。' if not narc_sat else '目標基準を達成中。継続算定を維持しましょう。'
     ))
     
-    # 2. 在宅患者訪問薬剤管理指導等の実績 (加算1基準: 24回, 加算2基準: 48回, 加算3/4基準: 48回)
+    # 2. 在宅訪問薬剤管理指導実績
     target_home = 24 if is_basic_1 else 48
     home_sat = m.home_visit_count >= target_home
     home_short = max(0, target_home - m.home_visit_count)
-    reqs.append(RequirementStatus(
+    perf_reqs.append(RequirementStatus(
         name='在宅訪問薬剤管理指導実績',
         category='在宅実績',
-        current_value=float(m.home_visit_count),
-        target_value=float(target_home),
-        unit='回/年',
+        requirement_type='performance',
+        current_value_text=f'{m.home_visit_count}回',
+        target_value_text=f'{target_home}回/年',
+        unit='回',
         is_satisfied=home_sat,
         progress_percentage=min(100.0, round((m.home_visit_count / target_home) * 100, 1)),
-        shortage=float(home_short),
-        advice=f'あと{home_short}回で基準達成です。外来通院が難しくなった患者様へ在宅療養移行の提案を行いましょう。' if not home_sat else '目標基準を達成しています。'
+        shortage_text=f'不足 {home_short}回' if not home_sat else None,
+        advice=f'あと{home_short}回で基準達成です。通院困難患者への在宅訪問提案を強化しましょう。' if not home_sat else '目標基準を達成中。'
     ))
     
-    # 3. かかりつけ薬剤師指導料等実績 (加算1基準: 40回, 加算2基準: 80回, 加算3/4基準: 100回)
-    target_family = 40 if is_basic_1 else 100
-    fam_sat = m.family_pharmacist_count >= target_family
-    fam_short = max(0, target_family - m.family_pharmacist_count)
-    reqs.append(RequirementStatus(
+    # 3. かかりつけ薬剤師指導料実績
+    target_fam = 40 if is_basic_1 else 100
+    fam_sat = m.family_pharmacist_count >= target_fam
+    fam_short = max(0, target_fam - m.family_pharmacist_count)
+    perf_reqs.append(RequirementStatus(
         name='かかりつけ薬剤師指導料実績',
         category='服薬指導',
-        current_value=float(m.family_pharmacist_count),
-        target_value=float(target_family),
-        unit='回/年',
+        requirement_type='performance',
+        current_value_text=f'{m.family_pharmacist_count}回',
+        target_value_text=f'{target_fam}回/年',
+        unit='回',
         is_satisfied=fam_sat,
-        progress_percentage=min(100.0, round((m.family_pharmacist_count / target_family) * 100, 1)),
-        shortage=float(fam_short),
-        advice=f'あと{fam_short}回で基準達成です。定期来局される複数疾患の患者様へ同意取得を進めましょう。' if not fam_sat else '目標基準を達成しています。'
+        progress_percentage=min(100.0, round((m.family_pharmacist_count / target_fam) * 100, 1)),
+        shortage_text=f'不足 {fam_short}回' if not fam_sat else None,
+        advice=f'あと{fam_short}回で基準達成です。定期来局される複数疾患患者への同意取得を進めましょう。' if not fam_sat else '目標基準を達成中。'
     ))
     
-    # 4. 服薬情報等提供料（トレーシングレポート等）実績 (加算1基準: 12回, 加算2基準: 30回, 加算3/4基準: 60回)
+    # 4. 服薬情報等提供料（トレーシングレポート等）実績
     target_info = 12 if is_basic_1 else 60
     info_sat = m.info_provision_count >= target_info
     info_short = max(0, target_info - m.info_provision_count)
-    reqs.append(RequirementStatus(
+    perf_reqs.append(RequirementStatus(
         name='服薬情報等提供料実績',
         category='医療連携',
-        current_value=float(m.info_provision_count),
-        target_value=float(target_info),
-        unit='回/年',
+        requirement_type='performance',
+        current_value_text=f'{m.info_provision_count}回',
+        target_value_text=f'{target_info}回/年',
+        unit='回',
         is_satisfied=info_sat,
         progress_percentage=min(100.0, round((m.info_provision_count / target_info) * 100, 1)),
-        shortage=float(info_short),
-        advice='残薬整理や副作用疑い、服用状況のフィードバックなど、医師へのトレーシングレポート作成を習慣化しましょう。' if not info_sat else '目標基準を達成しています。'
+        shortage_text=f'不足 {info_short}回' if not info_sat else None,
+        advice='残薬整理や副作用疑い、アドヒアランス低下など医師へのトレーシングレポート作成を習慣化しましょう。' if not info_sat else '目標基準を達成中。'
     ))
     
-    # 5. プレアボイド事例報告実績 (加算1〜4共通: 1件以上)
-    target_preavoid = 1
-    pre_sat = m.preavoid_count >= target_preavoid
-    pre_short = max(0, target_preavoid - m.preavoid_count)
-    reqs.append(RequirementStatus(
+    # 5. プレアボイド事例報告実績
+    target_pre = 1
+    pre_sat = m.preavoid_count >= target_pre
+    pre_short = max(0, target_pre - m.preavoid_count)
+    perf_reqs.append(RequirementStatus(
         name='プレアボイド事例報告実績',
         category='医療安全',
-        current_value=float(m.preavoid_count),
-        target_value=float(target_preavoid),
-        unit='件/年',
+        requirement_type='performance',
+        current_value_text=f'{m.preavoid_count}件',
+        target_value_text=f'{target_pre}件/年',
+        unit='件',
         is_satisfied=pre_sat,
-        progress_percentage=min(100.0, round((m.preavoid_count / target_preavoid) * 100, 1)),
-        shortage=float(pre_short),
-        advice='疑義照会による処方変更や重篤な副作用回避事例を日薬プレアボイドシステムに年1件以上登録しましょう。' if not pre_sat else '日本薬剤師会への報告実績を満たしています。'
+        progress_percentage=min(100.0, round((m.preavoid_count / target_pre) * 100, 1)),
+        shortage_text=f'不足 {pre_short}件' if not pre_sat else None,
+        advice='疑義照会による処方変更や副作用回避事例を日薬プレアボイドシステムに年1件以上登録しましょう。' if not pre_sat else '報告実績を満たしています。'
     ))
     
-    # 6. 後発医薬品使用割合 (加算基準: 80.0%以上)
+    # 6. 後発医薬品使用割合
     target_gen = 80.0
     gen_sat = m.generic_percentage >= target_gen
     gen_short = max(0.0, round(target_gen - m.generic_percentage, 1))
-    reqs.append(RequirementStatus(
+    perf_reqs.append(RequirementStatus(
         name='後発医薬品使用割合',
         category='医薬品供給',
-        current_value=m.generic_percentage,
-        target_value=target_gen,
+        requirement_type='performance',
+        current_value_text=f'{m.generic_percentage:.1f}%',
+        target_value_text=f'{target_gen:.1f}%以上',
         unit='%',
         is_satisfied=gen_sat,
         progress_percentage=min(100.0, round((m.generic_percentage / target_gen) * 100, 1)),
-        shortage=gen_short,
-        advice=f'基準まであと{gen_short}%です。先発品希望患者への丁寧なジェネリック変更案内を強化しましょう。' if not gen_sat else '後発医薬品割合の基準（80%以上）をクリアしています。'
+        shortage_text=f'不足 {gen_short}%' if not gen_sat else None,
+        advice=f'基準まであと{gen_short}%です。先発希望患者へのジェネリック案内を強化しましょう。' if not gen_sat else '後発医薬品割合の基準（80%以上）をクリアしています。'
     ))
+
+    # ----------------------------------------------------
+    # ② 体制要件（薬局の設備・協定・システム等の基盤要件）
+    # ----------------------------------------------------
+    struct_reqs = []
     
-    # 7. 備蓄医薬品品目数 (医薬品供給対応基準: 1,200品目以上)
-    target_stock = 1200
-    stock_sat = m.stock_drugs_count >= target_stock
-    stock_short = max(0, target_stock - m.stock_drugs_count)
-    reqs.append(RequirementStatus(
+    # 1. 備蓄医薬品品目数 (1,200品目以上)
+    stock_sat = m.stock_drugs_count >= 1200
+    stock_short = max(0, 1200 - m.stock_drugs_count)
+    struct_reqs.append(RequirementStatus(
         name='備蓄医薬品品目数',
         category='供給体制',
-        current_value=float(m.stock_drugs_count),
-        target_value=float(target_stock),
+        requirement_type='structural',
+        current_value_text=f'{m.stock_drugs_count}品目',
+        target_value_text='1,200品目以上',
         unit='品目',
         is_satisfied=stock_sat,
-        progress_percentage=min(100.0, round((m.stock_drugs_count / target_stock) * 100, 1)),
-        shortage=float(stock_short),
-        advice=f'医薬品供給対応体制加算の基準まであと{stock_short}品目です。' if not stock_sat else '備蓄品目数要件（1,200品目以上）をクリアしています。'
+        progress_percentage=min(100.0, round((m.stock_drugs_count / 1200) * 100, 1)),
+        shortage_text=f'不足 {stock_short}品目' if not stock_sat else None,
+        advice='医薬品供給対応体制加算の基準（1,200品目）を満たすよう備蓄品目を調整してください。' if not stock_sat else '備蓄品目数要件（1,200品目以上）をクリアしています。'
     ))
     
-    # 加算1〜4の判定
+    # 2. 24時間調剤・在宅対応体制
+    struct_reqs.append(RequirementStatus(
+        name='24時間調剤・在宅対応体制',
+        category='対応体制',
+        requirement_type='structural',
+        current_value_text='体制整備済' if m.has_24h_system else '未整備',
+        target_value_text='体制整備必須',
+        unit='',
+        is_satisfied=m.has_24h_system,
+        progress_percentage=100.0 if m.has_24h_system else 0.0,
+        shortage_text='体制未整備' if not m.has_24h_system else None,
+        advice='夜間・休日等の24時間対応体制および連絡先周知が必要です。' if not m.has_24h_system else '24時間対応体制を整備済みです。'
+    ))
+    
+    # 3. 新興感染症対応・連携協定
+    struct_reqs.append(RequirementStatus(
+        name='新興感染症対応・連携協定',
+        category='感染症対応',
+        requirement_type='structural',
+        current_value_text='協定締結済' if m.has_infection_system else '未締結',
+        target_value_text='協定締結必須',
+        unit='',
+        is_satisfied=m.has_infection_system,
+        progress_percentage=100.0 if m.has_infection_system else 0.0,
+        shortage_text='協定未締結' if not m.has_infection_system else None,
+        advice='自治体・医師会との新興感染症連携協定の締結を進めてください。' if not m.has_infection_system else '連携協定を締結済みです。'
+    ))
+    
+    # 4. オンライン資格確認・電子処方箋体制
+    it_sat = m.has_online_qualification and m.has_electronic_prescription
+    struct_reqs.append(RequirementStatus(
+        name='オンライン資格確認 ＆ 電子処方箋体制',
+        category='医療DX',
+        requirement_type='structural',
+        current_value_text='DX基盤導入済' if it_sat else '一部未対応',
+        target_value_text='両方導入必須',
+        unit='',
+        is_satisfied=it_sat,
+        progress_percentage=100.0 if it_sat else 50.0,
+        shortage_text='未導入あり' if not it_sat else None,
+        advice='マイナ保険証対応および電子処方箋の受付体制を整備してください。' if not it_sat else '医療DXの基盤整備をクリアしています。'
+    ))
+    
+    # 5. 要指導医薬品・一般用医薬品の備蓄販売
+    struct_reqs.append(RequirementStatus(
+        name='OTC・要指導医薬品の備蓄販売',
+        category='地域支援',
+        requirement_type='structural',
+        current_value_text='販売体制あり' if m.has_otc_sales else '取扱なし',
+        target_value_text='取扱必須',
+        unit='',
+        is_satisfied=m.has_otc_sales,
+        progress_percentage=100.0 if m.has_otc_sales else 0.0,
+        shortage_text='取扱なし' if not m.has_otc_sales else None,
+        advice='要指導医薬品・一般用医薬品（第1類〜第3類）の陳列・販売体制を維持してください。' if not m.has_otc_sales else 'OTC備蓄販売体制をクリアしています。'
+    ))
+
+    # ----------------------------------------------------
+    # 加算判定ロジック
+    # ----------------------------------------------------
+    supply_qualified = (stock_sat and gen_sat and m.has_24h_system and m.has_online_qualification)
+    infection_qualified = (m.has_infection_system and m.has_otc_sales and m.has_electronic_prescription)
+    
+    all_perf_met = (narc_sat and home_sat and fam_sat and info_sat and pre_sat and gen_sat)
+    all_struct_met = (m.has_24h_system and m.has_online_qualification)
+    
     tier_statuses = {
         '地域支援体制加算1': False,
         '地域支援体制加算2': False,
@@ -162,10 +225,7 @@ def evaluate_regional_support(m: PharmacyMetrics) -> RegionalEvaluationResult:
         '地域支援体制加算4': False
     }
     
-    all_basic_reqs_met = (narc_sat and home_sat and fam_sat and info_sat and pre_sat and gen_sat and m.has_24h_system)
-    
-    # 上位要件（加算2判定用: 在宅48回以上、かかりつけ80回以上等）
-    is_tier2_met = all_basic_reqs_met and (m.home_visit_count >= 48) and (m.family_pharmacist_count >= 80) and (m.narcotics_count >= 3)
+    is_tier2_met = all_perf_met and all_struct_met and (m.home_visit_count >= 48) and (m.family_pharmacist_count >= 80) and (m.narcotics_count >= 3)
     
     if is_basic_1:
         if is_tier2_met:
@@ -173,7 +233,7 @@ def evaluate_regional_support(m: PharmacyMetrics) -> RegionalEvaluationResult:
             tier_statuses['地域支援体制加算1'] = True
             current_tier = '地域支援体制加算2'
             points = 47
-        elif all_basic_reqs_met:
+        elif all_perf_met and all_struct_met:
             tier_statuses['地域支援体制加算1'] = True
             current_tier = '地域支援体制加算1'
             points = 39
@@ -181,8 +241,7 @@ def evaluate_regional_support(m: PharmacyMetrics) -> RegionalEvaluationResult:
             current_tier = '加算未達（要件不足）'
             points = 0
     else:
-        # 基本料1以外の場合（加算3 or 4）
-        is_tier3_met = all_basic_reqs_met and (m.narcotics_count >= 10) and (m.home_visit_count >= 48) and (m.family_pharmacist_count >= 100)
+        is_tier3_met = all_perf_met and all_struct_met and (m.narcotics_count >= 10) and (m.home_visit_count >= 48) and (m.family_pharmacist_count >= 100)
         is_tier4_met = is_tier3_met and (m.night_holiday_count >= 400)
         if is_tier4_met:
             tier_statuses['地域支援体制加算4'] = True
@@ -197,26 +256,26 @@ def evaluate_regional_support(m: PharmacyMetrics) -> RegionalEvaluationResult:
             current_tier = '加算未達（要件不足）'
             points = 0
             
-    # サマリーと優先アクションの生成
-    priority_actions = []
-    unsatisfied = [r for r in reqs if not r.is_satisfied]
+    # 実績面と体制面でのアクション提示
+    perf_actions = []
+    struct_actions = []
     
-    if not unsatisfied:
-        summary_msg = f'現在【{current_tier}】の全要件を満たしています！この調子で算定実績を維持しましょう。'
-        if current_tier == '地域支援体制加算1' and is_basic_1:
-            diff_home = max(0, 48 - m.home_visit_count)
-            diff_fam = max(0, 80 - m.family_pharmacist_count)
-            if diff_home > 0 or diff_fam > 0:
-                priority_actions.append(f'【ステップアップ】上位の「地域支援体制加算2」まで、あと在宅訪問{diff_home}回、かかりつけ{diff_fam}回です。')
-    else:
-        summary_msg = f'現在、基準未達の項目が {len(unsatisfied)} 項目あります。以下の優先アクションを実施することで加算算定が可能になります。'
-        for r in unsatisfied:
-            priority_actions.append(f'【{r.name}】不足: {r.shortage}{r.unit} （現在 {r.current_value}{r.unit} / 目標 {r.target_value}{r.unit}）')
+    for r in perf_reqs:
+        if not r.is_satisfied:
+            perf_actions.append(f'【{r.name}】{r.shortage_text} （現在: {r.current_value_text} / 目標: {r.target_value_text}）')
             
-    if supply_qualified:
-        priority_actions.append('医薬品供給対応体制加算（備蓄1,200品目・後発品80%等）の要件をクリアしています。')
+    for r in struct_reqs:
+        if not r.is_satisfied:
+            struct_actions.append(f'【{r.name}】{r.advice}')
+            
+    if not perf_actions and not struct_actions:
+        summary_msg = f'現在【{current_tier}】の全要件をクリアしています！この調子で実績を維持しましょう。'
+    elif perf_actions and not struct_actions:
+        summary_msg = f'体制要件はすべてクリア済みです！実績要件の残り {len(perf_actions)} 項目を重点的に積み上げましょう。'
+    elif not perf_actions and struct_actions:
+        summary_msg = f'実績要件は達成しています！体制要件（設備・協定等）の残り {len(struct_actions)} 項目を整備しましょう。'
     else:
-        priority_actions.append('医薬品供給対応体制加算: 備蓄品目数または後発品割合の要件をご確認ください。')
+        summary_msg = f'実績要件に {len(perf_actions)} 件、体制要件に {len(struct_actions)} 件の不足があります。'
         
     return RegionalEvaluationResult(
         current_tier=current_tier,
@@ -225,7 +284,9 @@ def evaluate_regional_support(m: PharmacyMetrics) -> RegionalEvaluationResult:
         infection_enhancement_qualified=infection_qualified,
         points_earned=points,
         tier_statuses=tier_statuses,
-        requirements=reqs,
+        performance_requirements=perf_reqs,
+        structural_requirements=struct_reqs,
         summary_message=summary_msg,
-        priority_actions=priority_actions
+        performance_actions=perf_actions,
+        structural_actions=struct_actions
     )
