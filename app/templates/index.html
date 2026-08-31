@@ -11,6 +11,7 @@
   <style>
     body { -webkit-tap-highlight-color: transparent; }
     .pb-safe { padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px)); }
+    .drop-zone-active { border-color: #059669 !important; background-color: #ecfdf5 !important; }
   </style>
 </head>
 <body class="bg-slate-100 text-slate-800 min-h-screen font-sans antialiased pb-safe sm:pb-8">
@@ -24,9 +25,9 @@
         <div>
           <h1 class="text-base sm:text-lg font-bold tracking-tight flex items-center gap-1.5 sm:gap-2">
             PharmaSupport AI
-            <span class="text-[10px] sm:text-xs font-normal bg-emerald-600 px-1.5 py-0.5 rounded-full text-emerald-100">Step 1.5</span>
+            <span class="text-[10px] sm:text-xs font-normal bg-emerald-600 px-1.5 py-0.5 rounded-full text-emerald-100">Step 3 Ver.</span>
           </h1>
-          <p class="text-[10px] sm:text-xs text-emerald-200 line-clamp-1">地域支援加算 ＆ 患者別加算ナビ</p>
+          <p class="text-[10px] sm:text-xs text-emerald-200 line-clamp-1">地域支援加算 ＆ 実績自動入力 ＆ 患者ナビ</p>
         </div>
       </div>
       
@@ -83,6 +84,7 @@
 
   <main class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
 
+    <!-- TAB 1: 薬局全体 施設基準ダッシュボード -->
     <section id="tab-dashboard" class="tab-content space-y-5 sm:space-y-6">
       
       <div class="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-5">
@@ -131,6 +133,33 @@
         </div>
       </div>
 
+      <!-- NEW: File Upload & Auto Import Box -->
+      <div class="bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border-2 border-dashed border-emerald-300 rounded-2xl p-4 sm:p-5 text-center relative overflow-hidden shadow-xs transition hover:border-emerald-500" id="dropZone">
+        <input type="file" id="fileInput" class="hidden" accept=".uke,.csv,.txt" onchange="handleFileSelect(event)">
+        <div class="max-w-xl mx-auto space-y-2.5">
+          <div class="w-10 h-10 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center mx-auto shadow-inner">
+            <i data-lucide="upload-cloud" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h4 class="text-xs sm:text-sm font-black text-slate-900">📂 レセコンファイルから実績を「全自動入力」</h4>
+            <p class="text-[10px] sm:text-xs text-slate-600 mt-0.5">
+              レセ電ファイル (<strong>.UKE</strong>) または <strong>月次集計CSV</strong> をここにドロップするだけで、麻薬・在宅・かかりつけ等の全実績を1秒で自動集計します。
+            </p>
+          </div>
+          <div class="flex flex-wrap items-center justify-center gap-2 pt-1">
+            <button type="button" onclick="document.getElementById('fileInput').click()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-sm flex items-center gap-1.5 transition">
+              <i data-lucide="file-up" class="w-3.5 h-3.5"></i>
+              <span>ファイルを選択</span>
+            </button>
+            <button type="button" onclick="loadSampleData()" class="px-4 py-2 bg-white hover:bg-slate-50 text-emerald-800 border border-emerald-300 text-xs font-bold rounded-lg shadow-2xs flex items-center gap-1.5 transition">
+              <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-500"></i>
+              <span>✨ サンプルデータで自動集計を試す</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Advices Banner -->
       <div id="adviceBanner" class="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-3">
         <div class="flex items-start gap-2.5">
           <div class="p-1.5 bg-amber-100 text-amber-700 rounded-lg shrink-0 mt-0.5">
@@ -439,6 +468,44 @@
       </div>
     </section>
   </main>
+
+  <!-- Import Result Modal -->
+  <div id="importModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl border border-emerald-500 p-5 sm:p-6 space-y-4 animate-in fade-in zoom-in-95 duration-200">
+      <div class="flex items-center gap-3 border-b pb-3">
+        <div class="w-10 h-10 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center shrink-0">
+          <i data-lucide="check-circle" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <h4 class="text-base font-black text-slate-900">⚡ ファイル解析 ＆ 自動集計完了！</h4>
+          <p class="text-xs text-slate-500" id="importModalFilename">ファイル名</p>
+        </div>
+      </div>
+
+      <div class="space-y-2 bg-slate-50 p-3.5 rounded-xl border border-slate-200 text-xs">
+        <div class="font-bold text-slate-800 flex justify-between border-b pb-1.5 mb-1.5">
+          <span>検出された実績データ</span>
+          <span class="text-emerald-700">自動算出値</span>
+        </div>
+        <div class="grid grid-cols-2 gap-2 text-slate-600">
+          <div>月平均処方箋枚数: <strong id="impMonthlyRx" class="text-slate-900 font-bold">--</strong> 枚</div>
+          <div>後発医薬品割合: <strong id="impGeneric" class="text-slate-900 font-bold">--</strong>%</div>
+          <div>麻薬調剤実績: <strong id="impNarc" class="text-slate-900 font-bold">--</strong> 回/年</div>
+          <div>在宅訪問実績: <strong id="impHome" class="text-slate-900 font-bold">--</strong> 回/年</div>
+          <div>かかりつけ実績: <strong id="impFam" class="text-slate-900 font-bold">--</strong> 回/年</div>
+          <div>服薬情報提供料: <strong id="impInfo" class="text-slate-900 font-bold">--</strong> 回/年</div>
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2.5 pt-2">
+        <button type="button" onclick="closeImportModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-lg">キャンセル</button>
+        <button type="button" onclick="applyImportedData()" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-lg shadow-md flex items-center gap-1.5">
+          <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+          <span>このデータでダッシュボードを更新</span>
+        </button>
+      </div>
+    </div>
+  </div>
 
   <!-- Simulator / Settings Modal -->
   <div id="simulatorDrawer" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto">

@@ -1,8 +1,9 @@
-// PharmaSupport AI Frontend Script (Performance & Structural Requirements Split)
+// PharmaSupport AI Frontend Script (Import & Split Requirements)
 
 let currentMetrics = null;
 let regionalResult = null;
 let metricsChart = null;
+let pendingImportData = null;
 
 // Tab Management
 function switchTab(tabId) {
@@ -70,6 +71,117 @@ function toggleInhaleChild() {
     childBox.classList.add('hidden');
     document.getElementById('pInhaleFirst').checked = false;
   }
+}
+
+// ----------------------------------------------------
+// File Upload & Auto Import Logic
+// ----------------------------------------------------
+async function handleFileSelect(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  await uploadAndParseFile(file);
+}
+
+async function uploadAndParseFile(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  try {
+    const res = await fetch('/api/import-file', {
+      method: 'POST',
+      body: formData
+    });
+    const data = await res.json();
+    if (data.status === 'success') {
+      showImportModal(data.filename, data.parsed_data);
+    }
+  } catch (err) {
+    alert('ファイルの解析に失敗しました: ' + err.message);
+  }
+}
+
+async function loadSampleData() {
+  try {
+    const res = await fetch('/api/sample-import', { method: 'POST' });
+    const data = await res.json();
+    if (data.status === 'success') {
+      showImportModal(data.filename, data.parsed_data);
+    }
+  } catch (err) {
+    alert('サンプルデータの読み込みに失敗しました');
+  }
+}
+
+function showImportModal(filename, parsed) {
+  pendingImportData = parsed;
+  document.getElementById('importModalFilename').innerText = `${filename} （${parsed.format || '解析完了'}）`;
+  document.getElementById('impMonthlyRx').innerText = (parsed.monthly_prescriptions || 1200).toLocaleString();
+  document.getElementById('impGeneric').innerText = (parsed.generic_percentage || 80.0).toFixed(1);
+  document.getElementById('impNarc').innerText = parsed.narcotics_count || 0;
+  document.getElementById('impHome').innerText = parsed.home_visit_count || 0;
+  document.getElementById('impFam').innerText = parsed.family_pharmacist_count || 0;
+  document.getElementById('impInfo').innerText = parsed.info_provision_count || 0;
+
+  const modal = document.getElementById('importModal');
+  modal.classList.remove('hidden');
+  lucide.createIcons();
+}
+
+function closeImportModal() {
+  document.getElementById('importModal').classList.add('hidden');
+  pendingImportData = null;
+}
+
+async function applyImportedData() {
+  if (!pendingImportData || !currentMetrics) return;
+
+  currentMetrics.monthly_prescriptions = pendingImportData.monthly_prescriptions || currentMetrics.monthly_prescriptions;
+  currentMetrics.narcotics_count = pendingImportData.narcotics_count ?? currentMetrics.narcotics_count;
+  currentMetrics.home_visit_count = pendingImportData.home_visit_count ?? currentMetrics.home_visit_count;
+  currentMetrics.family_pharmacist_count = pendingImportData.family_pharmacist_count ?? currentMetrics.family_pharmacist_count;
+  currentMetrics.info_provision_count = pendingImportData.info_provision_count ?? currentMetrics.info_provision_count;
+  currentMetrics.preavoid_count = pendingImportData.preavoid_count ?? currentMetrics.preavoid_count;
+  currentMetrics.generic_percentage = pendingImportData.generic_percentage ?? currentMetrics.generic_percentage;
+
+  populateMetricsForm(currentMetrics);
+
+  await fetch('/api/metrics', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(currentMetrics)
+  });
+
+  await evaluateRegional(currentMetrics);
+  closeImportModal();
+
+  alert('⚡ レセコンデータの実績値をダッシュボードに反映・保存しました！');
+}
+
+// Drag and drop setup
+function setupDropZone() {
+  const zone = document.getElementById('dropZone');
+  if (!zone) return;
+
+  ['dragenter', 'dragover'].forEach(name => {
+    zone.addEventListener(name, (e) => {
+      e.preventDefault();
+      zone.classList.add('drop-zone-active');
+    });
+  });
+
+  ['dragleave', 'drop'].forEach(name => {
+    zone.addEventListener(name, (e) => {
+      e.preventDefault();
+      zone.classList.remove('drop-zone-active');
+    });
+  });
+
+  zone.addEventListener('drop', async (e) => {
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      await uploadAndParseFile(files[0]);
+    }
+  });
 }
 
 // ----------------------------------------------------
@@ -153,7 +265,7 @@ function renderRegionalDashboard(result, metrics) {
   const annualYen = metrics.monthly_prescriptions * 12 * result.points_earned * 10;
   document.getElementById('annualRevenueEst').innerText = `¥ ${annualYen.toLocaleString()}`;
 
-  // 4. Advices Banner (Split into Perf & Struct)
+  // 4. Advices Banner
   document.getElementById('summaryMsgText').innerText = result.summary_message;
   
   const perfList = document.getElementById('perfActionList');
@@ -180,7 +292,7 @@ function renderRegionalDashboard(result, metrics) {
     });
   }
 
-  // 5. Performance Requirements Grid (実績要件)
+  // 5. Performance Requirements Grid
   const perfGrid = document.getElementById('perfRequirementsGrid');
   perfGrid.innerHTML = '';
   result.performance_requirements.forEach(req => {
@@ -218,7 +330,7 @@ function renderRegionalDashboard(result, metrics) {
     perfGrid.appendChild(card);
   });
 
-  // 6. Structural Requirements Grid (体制要件)
+  // 6. Structural Requirements Grid
   const structGrid = document.getElementById('structRequirementsGrid');
   structGrid.innerHTML = '';
   result.structural_requirements.forEach(req => {
@@ -304,9 +416,7 @@ function renderMetricsChart() {
 
   const months = ['9月', '10月', '11月', '12月', '1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月'];
 
-  if (metricsChart) {
-    metricsChart.destroy();
-  }
+  if (metricsChart) metricsChart.destroy();
 
   metricsChart = new Chart(ctx, {
     type: 'line',
@@ -343,19 +453,11 @@ function renderMetricsChart() {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        legend: {
-          position: 'top',
-          labels: { boxWidth: 10, font: { size: 10 } }
-        }
+        legend: { position: 'top', labels: { boxWidth: 10, font: { size: 10 } } }
       },
       scales: {
-        y: {
-          beginAtZero: true,
-          ticks: { stepSize: 1, font: { size: 9 } }
-        },
-        x: {
-          ticks: { font: { size: 9 } }
-        }
+        y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 9 } } },
+        x: { ticks: { font: { size: 9 } } }
       }
     }
   });
@@ -603,8 +705,8 @@ function printReport() {
   }, 300);
 }
 
-// Initialization on DOMContentLoaded
 document.addEventListener('DOMContentLoaded', () => {
   loadMetrics();
   triggerPatientEval();
+  setupDropZone();
 });
