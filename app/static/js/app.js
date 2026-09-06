@@ -1,11 +1,9 @@
-// PharmaSupport AI Frontend Script (Import & Split Requirements)
+// PharmaSupport AI (薬サポ) - 令和8年度改定完全準拠版 Frontend
 
 let currentMetrics = null;
 let regionalResult = null;
-let metricsChart = null;
 let pendingImportData = null;
 
-// Tab Management
 function switchTab(tabId) {
   document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
   
@@ -15,7 +13,7 @@ function switchTab(tabId) {
   });
   
   document.querySelectorAll('.m-tab-btn').forEach(el => {
-    el.classList.remove('text-emerald-700', 'font-bold');
+    el.classList.remove('text-emerald-800', 'font-bold');
     el.classList.add('text-slate-500', 'font-medium');
   });
 
@@ -30,7 +28,7 @@ function switchTab(tabId) {
   }
   if (targetMBtn) {
     targetMBtn.classList.remove('text-slate-500', 'font-medium');
-    targetMBtn.classList.add('text-emerald-700', 'font-bold');
+    targetMBtn.classList.add('text-emerald-800', 'font-bold');
   }
 
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -61,139 +59,12 @@ document.addEventListener('click', (e) => {
   }
 });
 
-function toggleInhaleChild() {
-  const isChecked = document.getElementById('pInhale').checked;
-  const childBox = document.getElementById('inhaleChildBox');
-  if (isChecked) {
-    childBox.classList.remove('hidden');
-    document.getElementById('pInhaleFirst').checked = true;
-  } else {
-    childBox.classList.add('hidden');
-    document.getElementById('pInhaleFirst').checked = false;
-  }
-}
-
-// ----------------------------------------------------
-// File Upload & Auto Import Logic
-// ----------------------------------------------------
-async function handleFileSelect(e) {
-  const file = e.target.files[0];
-  if (!file) return;
-  await uploadAndParseFile(file);
-}
-
-async function uploadAndParseFile(file) {
-  const formData = new FormData();
-  formData.append('file', file);
-
-  try {
-    const res = await fetch('/api/import-file', {
-      method: 'POST',
-      body: formData
-    });
-    const data = await res.json();
-    if (data.status === 'success') {
-      showImportModal(data.filename, data.parsed_data);
-    }
-  } catch (err) {
-    alert('ファイルの解析に失敗しました: ' + err.message);
-  }
-}
-
-async function loadSampleData() {
-  try {
-    const res = await fetch('/api/sample-import', { method: 'POST' });
-    const data = await res.json();
-    if (data.status === 'success') {
-      showImportModal(data.filename, data.parsed_data);
-    }
-  } catch (err) {
-    alert('サンプルデータの読み込みに失敗しました');
-  }
-}
-
-function showImportModal(filename, parsed) {
-  pendingImportData = parsed;
-  document.getElementById('importModalFilename').innerText = `${filename} （${parsed.format || '解析完了'}）`;
-  document.getElementById('impMonthlyRx').innerText = (parsed.monthly_prescriptions || 1200).toLocaleString();
-  document.getElementById('impGeneric').innerText = (parsed.generic_percentage || 80.0).toFixed(1);
-  document.getElementById('impNarc').innerText = parsed.narcotics_count || 0;
-  document.getElementById('impHome').innerText = parsed.home_visit_count || 0;
-  document.getElementById('impFam').innerText = parsed.family_pharmacist_count || 0;
-  document.getElementById('impInfo').innerText = parsed.info_provision_count || 0;
-
-  const modal = document.getElementById('importModal');
-  modal.classList.remove('hidden');
-  lucide.createIcons();
-}
-
-function closeImportModal() {
-  document.getElementById('importModal').classList.add('hidden');
-  pendingImportData = null;
-}
-
-async function applyImportedData() {
-  if (!pendingImportData || !currentMetrics) return;
-
-  currentMetrics.monthly_prescriptions = pendingImportData.monthly_prescriptions || currentMetrics.monthly_prescriptions;
-  currentMetrics.narcotics_count = pendingImportData.narcotics_count ?? currentMetrics.narcotics_count;
-  currentMetrics.home_visit_count = pendingImportData.home_visit_count ?? currentMetrics.home_visit_count;
-  currentMetrics.family_pharmacist_count = pendingImportData.family_pharmacist_count ?? currentMetrics.family_pharmacist_count;
-  currentMetrics.info_provision_count = pendingImportData.info_provision_count ?? currentMetrics.info_provision_count;
-  currentMetrics.preavoid_count = pendingImportData.preavoid_count ?? currentMetrics.preavoid_count;
-  currentMetrics.generic_percentage = pendingImportData.generic_percentage ?? currentMetrics.generic_percentage;
-
-  populateMetricsForm(currentMetrics);
-
-  await fetch('/api/metrics', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(currentMetrics)
-  });
-
-  await evaluateRegional(currentMetrics);
-  closeImportModal();
-
-  alert('⚡ レセコンデータの実績値をダッシュボードに反映・保存しました！');
-}
-
-// Drag and drop setup
-function setupDropZone() {
-  const zone = document.getElementById('dropZone');
-  if (!zone) return;
-
-  ['dragenter', 'dragover'].forEach(name => {
-    zone.addEventListener(name, (e) => {
-      e.preventDefault();
-      zone.classList.add('drop-zone-active');
-    });
-  });
-
-  ['dragleave', 'drop'].forEach(name => {
-    zone.addEventListener(name, (e) => {
-      e.preventDefault();
-      zone.classList.remove('drop-zone-active');
-    });
-  });
-
-  zone.addEventListener('drop', async (e) => {
-    const files = e.dataTransfer.files;
-    if (files.length > 0) {
-      await uploadAndParseFile(files[0]);
-    }
-  });
-}
-
-// ----------------------------------------------------
-// Pharmacy Metrics & Regional Support Logic
-// ----------------------------------------------------
 async function loadMetrics() {
   try {
     const res = await fetch('/api/metrics');
     currentMetrics = await res.json();
     populateMetricsForm(currentMetrics);
     await evaluateRegional(currentMetrics);
-    renderMetricsChart();
   } catch (err) {
     console.error('Failed to load metrics:', err);
   }
@@ -206,24 +77,24 @@ function populateMetricsForm(m) {
   document.getElementById('inputPharmacyName').value = m.pharmacy_name;
   document.getElementById('inputBasicFeeType').value = m.dispensing_basic_fee_type;
   document.getElementById('inputMonthlyRx').value = m.monthly_prescriptions;
-  document.getElementById('inputNarcotics').value = m.narcotics_count;
-  document.getElementById('inputHomeVisit').value = m.home_visit_count;
-  document.getElementById('inputFamilyPharm').value = m.family_pharmacist_count;
-  document.getElementById('inputInfoProv').value = m.info_provision_count;
-  document.getElementById('inputPreavoid').value = m.preavoid_count;
+  
   document.getElementById('inputGeneric').value = m.generic_percentage;
   document.getElementById('inputStockDrugs').value = m.stock_drugs_count;
+  document.getElementById('inputDeviceCount').value = m.self_medication_device_count;
 
-  // Checkboxes
-  document.getElementById('inputHas24h').checked = !!m.has_24h_system;
-  document.getElementById('inputHasInfection').checked = !!m.has_infection_system;
-  document.getElementById('inputHasOnline').checked = !!m.has_online_qualification;
-  document.getElementById('inputHasEPrescription').checked = !!m.has_electronic_prescription;
-  document.getElementById('inputHasOtc').checked = !!m.has_otc_sales;
+  document.getElementById('inputRec1').value = m.rec_1_night_holiday_count;
+  document.getElementById('inputRec2').value = m.rec_2_narcotics_count;
+  document.getElementById('inputRec3').value = m.rec_3_prevention_adjustment_count;
+  document.getElementById('inputRec4').value = m.rec_4_guidance_1a_2a_count;
+  document.getElementById('inputRec5').value = m.rec_5_outpatient_support_1_count;
+  document.getElementById('inputRec6').value = m.rec_6_home_visit_count;
+  document.getElementById('inputRec7').value = m.rec_7_info_provision_tr_count;
+  document.getElementById('inputRec8').value = m.rec_8_pediatric_special_count;
+  document.getElementById('inputRec9').value = m.rec_9_multidisciplinary_conference_count;
 
   document.getElementById('statMonthlyRx').innerText = m.monthly_prescriptions.toLocaleString();
-  document.getElementById('statStockDrugs').innerText = m.stock_drugs_count.toLocaleString() + ' 品目';
-  document.getElementById('statGenericRate').innerText = m.generic_percentage.toFixed(1);
+  document.getElementById('statStockDrugs').innerText = m.stock_drugs_count.toLocaleString();
+  document.getElementById('genericRateDisplay').innerText = `${m.generic_percentage.toFixed(1)} %`;
 }
 
 async function evaluateRegional(metrics) {
@@ -241,124 +112,103 @@ async function evaluateRegional(metrics) {
 }
 
 function renderRegionalDashboard(result, metrics) {
-  // 1. Tier Badge
   const tierTitle = document.getElementById('tierBadgeTitle');
   tierTitle.innerText = result.current_tier;
-  if (result.points_earned > 0) {
-    tierTitle.className = 'text-xl sm:text-2xl font-black text-emerald-700 mt-0.5 sm:mt-1';
-  } else {
-    tierTitle.className = 'text-xl sm:text-2xl font-black text-rose-600 mt-0.5 sm:mt-1';
-  }
+  tierTitle.className = result.points_earned > 0 
+    ? 'text-xl sm:text-2xl font-black text-emerald-800 mt-0.5 sm:mt-1' 
+    : 'text-xl sm:text-2xl font-black text-rose-600 mt-0.5 sm:mt-1';
+  
   document.getElementById('tierPoints').innerText = `+${result.points_earned} 点`;
+  document.getElementById('genericStatusText').innerText = metrics.generic_percentage >= 85.0 ? '適合 (85%以上)' : '未達 (85%未満)';
 
-  // 2. Supply System Addition
-  const supplyTitle = document.getElementById('supplyStatusTitle');
-  if (result.supply_system_addition_qualified) {
-    supplyTitle.innerText = '適合（備蓄OK）';
-    supplyTitle.className = 'text-lg sm:text-xl font-bold text-emerald-700 mt-0.5 sm:mt-1';
-  } else {
-    supplyTitle.innerText = '要件未達';
-    supplyTitle.className = 'text-lg sm:text-xl font-bold text-rose-600 mt-0.5 sm:mt-1';
-  }
-
-  // 3. Annual Impact
   const annualYen = metrics.monthly_prescriptions * 12 * result.points_earned * 10;
   document.getElementById('annualRevenueEst').innerText = `¥ ${annualYen.toLocaleString()}`;
 
-  // 4. Advices Banner
   document.getElementById('summaryMsgText').innerText = result.summary_message;
-  
-  const perfList = document.getElementById('perfActionList');
-  perfList.innerHTML = '';
-  if (result.performance_actions.length === 0) {
-    perfList.innerHTML = '<li class="text-emerald-700 font-bold">全実績基準をクリア中！</li>';
-  } else {
-    result.performance_actions.forEach(act => {
-      const li = document.createElement('li');
-      li.innerText = act;
-      perfList.appendChild(li);
-    });
-  }
 
-  const structList = document.getElementById('structActionList');
-  structList.innerHTML = '';
-  if (result.structural_actions.length === 0) {
-    structList.innerHTML = '<li class="text-emerald-700 font-bold">全体制・設備要件をクリア中！</li>';
-  } else {
-    result.structural_actions.forEach(act => {
-      const li = document.createElement('li');
-      li.innerText = act;
-      structList.appendChild(li);
-    });
-  }
+  // Supply Actions
+  const sList = document.getElementById('supplyActionList');
+  sList.innerHTML = result.supply_actions.length === 0 
+    ? '<li class="text-emerald-800 font-bold">全8項目を完全クリア中！</li>' 
+    : result.supply_actions.map(a => `<li>${a}</li>`).join('');
 
-  // 5. Performance Requirements Grid
+  // Struct Actions
+  const stList = document.getElementById('structActionList');
+  stList.innerHTML = result.structural_actions.length === 0 
+    ? '<li class="text-emerald-800 font-bold">十分な体制要件をクリア中！</li>' 
+    : result.structural_actions.map(a => `<li>${a}</li>`).join('');
+
+  // Perf Actions
+  const pList = document.getElementById('perfActionList');
+  pList.innerHTML = result.performance_actions.length === 0 
+    ? '<li class="text-emerald-800 font-bold">全実績基準をクリア中！</li>' 
+    : result.performance_actions.map(a => `<li>${a}</li>`).join('');
+
+  // 1. Performance 9 Grid
   const perfGrid = document.getElementById('perfRequirementsGrid');
   perfGrid.innerHTML = '';
   result.performance_requirements.forEach(req => {
     const isOk = req.is_satisfied;
     const progress = Math.min(100, Math.max(0, req.progress_percentage));
-    
     const card = document.createElement('div');
-    card.className = `bg-white rounded-xl shadow-sm border ${isOk ? 'border-slate-200' : 'border-amber-300 bg-amber-50/20'} p-3.5 sm:p-4 flex flex-col justify-between`;
+    card.className = `bg-white rounded-xl shadow-sm border ${isOk ? 'border-slate-200' : 'border-amber-300 bg-amber-50/20'} p-3.5 flex flex-col justify-between`;
     card.innerHTML = `
       <div>
-        <div class="flex justify-between items-start mb-1.5">
-          <div>
-            <span class="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider">${req.category}</span>
-            <h4 class="text-xs sm:text-sm font-bold text-slate-900 leading-snug">${req.name}</h4>
-          </div>
-          <span class="text-[10px] sm:text-xs px-2 py-0.5 rounded-full font-bold ${isOk ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-800'}">
+        <div class="flex justify-between items-start mb-1">
+          <h4 class="text-xs sm:text-sm font-bold text-slate-900 leading-snug">${req.name}</h4>
+          <span class="text-[10px] px-2 py-0.5 rounded-full font-bold ${isOk ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">
             ${isOk ? '達成' : req.shortage_text}
           </span>
         </div>
-
         <div class="mt-2 flex items-baseline justify-between text-xs mb-1">
-          <span class="font-bold text-slate-800 text-sm sm:text-base">${req.current_value_text}</span>
-          <span class="text-slate-400 text-[10px] sm:text-xs">目標: ${req.target_value_text}</span>
+          <span class="font-black text-slate-800 text-sm sm:text-base">${req.current_value_text}</span>
+          <span class="text-slate-400 text-[10px]">${req.target_value_text}</span>
         </div>
-
-        <div class="w-full bg-slate-100 rounded-full h-1.5 sm:h-2 overflow-hidden mb-1.5">
-          <div class="h-full rounded-full transition-all duration-500 ${isOk ? 'bg-emerald-500' : 'bg-amber-500'}" style="width: ${progress}%"></div>
+        <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden mb-1">
+          <div class="h-full rounded-full ${isOk ? 'bg-emerald-600' : 'bg-amber-500'}" style="width: ${progress}%"></div>
         </div>
       </div>
-
-      <p class="text-[10px] sm:text-[11px] text-slate-500 mt-1.5 pt-1.5 border-t border-slate-100 leading-normal">
+      <p class="text-[10px] text-slate-500 mt-1 pt-1 border-t border-slate-100">
         <strong class="text-slate-700">指針:</strong> ${req.advice}
       </p>
     `;
     perfGrid.appendChild(card);
   });
 
-  // 6. Structural Requirements Grid
+  // 2. Supply 8 Grid
+  const supplyGrid = document.getElementById('supplyRequirementsGrid');
+  supplyGrid.innerHTML = '';
+  result.supply_requirements.forEach(req => {
+    const isOk = req.is_satisfied;
+    const card = document.createElement('div');
+    card.className = `bg-white rounded-lg border ${isOk ? 'border-slate-200' : 'border-rose-300 bg-rose-50/20'} p-2.5 flex flex-col justify-between text-xs`;
+    card.innerHTML = `
+      <div class="flex justify-between items-center mb-1">
+        <span class="font-bold text-slate-800 text-[11px]">${req.name}</span>
+        <span class="text-[9px] px-1.5 py-0.2 rounded font-bold ${isOk ? 'bg-blue-100 text-blue-800' : 'bg-rose-100 text-rose-800'}">
+          ${isOk ? '適' : '未達'}
+        </span>
+      </div>
+      <span class="text-[10px] text-slate-500">${req.official_ref}</span>
+    `;
+    supplyGrid.appendChild(card);
+  });
+
+  // 3. Structural Grid
   const structGrid = document.getElementById('structRequirementsGrid');
   structGrid.innerHTML = '';
   result.structural_requirements.forEach(req => {
     const isOk = req.is_satisfied;
-    
     const card = document.createElement('div');
-    card.className = `bg-white rounded-xl shadow-sm border ${isOk ? 'border-slate-200' : 'border-blue-300 bg-blue-50/20'} p-3.5 sm:p-4 flex flex-col justify-between`;
+    card.className = `bg-white rounded-xl shadow-sm border ${isOk ? 'border-slate-200' : 'border-purple-300 bg-purple-50/20'} p-3 flex flex-col justify-between text-xs`;
     card.innerHTML = `
-      <div>
-        <div class="flex justify-between items-start mb-1.5">
-          <div>
-            <span class="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider">${req.category}</span>
-            <h4 class="text-xs sm:text-sm font-bold text-slate-900 leading-snug">${req.name}</h4>
-          </div>
-          <span class="text-[10px] sm:text-xs px-2 py-0.5 rounded-full font-bold ${isOk ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-800'}">
-            ${isOk ? 'クリア' : '要整備'}
-          </span>
-        </div>
-
-        <div class="mt-2 flex items-baseline justify-between text-xs mb-1">
-          <span class="font-bold text-slate-800 text-sm sm:text-base">${req.current_value_text}</span>
-          <span class="text-slate-400 text-[10px] sm:text-xs">基準: ${req.target_value_text}</span>
-        </div>
+      <div class="flex justify-between items-start mb-1">
+        <h5 class="font-bold text-slate-900 text-xs">${req.name}</h5>
+        <span class="text-[10px] px-2 py-0.5 rounded-full font-bold ${isOk ? 'bg-purple-100 text-purple-800' : 'bg-rose-100 text-rose-800'}">
+          ${isOk ? '適合' : '要整備'}
+        </span>
       </div>
-
-      <p class="text-[10px] sm:text-[11px] text-slate-500 mt-1.5 pt-1.5 border-t border-slate-100 leading-normal">
-        <strong class="text-slate-700">対応:</strong> ${req.advice}
-      </p>
+      <div class="text-[11px] text-slate-600 mt-1">${req.current_value_text}</div>
     `;
     structGrid.appendChild(card);
   });
@@ -371,33 +221,32 @@ async function handleSaveMetrics(e) {
   const updated = {
     pharmacy_name: document.getElementById('inputPharmacyName').value || 'ひまわり調剤薬局',
     dispensing_basic_fee_type: document.getElementById('inputBasicFeeType').value,
-    monthly_prescriptions: parseInt(document.getElementById('inputMonthlyRx').value) || 1000,
-    concentration_rate: 75.0,
-    narcotics_count: parseInt(document.getElementById('inputNarcotics').value) || 0,
-    home_visit_count: parseInt(document.getElementById('inputHomeVisit').value) || 0,
-    family_pharmacist_count: parseInt(document.getElementById('inputFamilyPharm').value) || 0,
-    info_provision_count: parseInt(document.getElementById('inputInfoProv').value) || 0,
-    preavoid_count: parseInt(document.getElementById('inputPreavoid').value) || 0,
-    generic_percentage: parseFloat(document.getElementById('inputGeneric').value) || 80.0,
-    night_holiday_count: 120,
+    monthly_prescriptions: parseInt(document.getElementById('inputMonthlyRx').value) || 1200,
+    generic_percentage: parseFloat(document.getElementById('inputGeneric').value) || 85.0,
     stock_drugs_count: parseInt(document.getElementById('inputStockDrugs').value) || 1200,
-    has_24h_system: document.getElementById('inputHas24h').checked,
-    has_infection_system: document.getElementById('inputHasInfection').checked,
-    has_online_qualification: document.getElementById('inputHasOnline').checked,
-    has_electronic_prescription: document.getElementById('inputHasEPrescription').checked,
-    has_otc_sales: document.getElementById('inputHasOtc').checked
+    self_medication_device_count: parseInt(document.getElementById('inputDeviceCount').value) || 3,
+    
+    rec_1_night_holiday_count: parseInt(document.getElementById('inputRec1').value) || 0,
+    rec_2_narcotics_count: parseInt(document.getElementById('inputRec2').value) || 0,
+    rec_3_prevention_adjustment_count: parseInt(document.getElementById('inputRec3').value) || 0,
+    rec_4_guidance_1a_2a_count: parseInt(document.getElementById('inputRec4').value) || 0,
+    rec_5_outpatient_support_1_count: parseInt(document.getElementById('inputRec5').value) || 0,
+    rec_6_home_visit_count: parseInt(document.getElementById('inputRec6').value) || 0,
+    rec_7_info_provision_tr_count: parseInt(document.getElementById('inputRec7').value) || 0,
+    rec_8_pediatric_special_count: parseInt(document.getElementById('inputRec8').value) || 0,
+    rec_9_multidisciplinary_conference_count: parseInt(document.getElementById('inputRec9').value) || 0
   };
 
-  currentMetrics = updated;
-  populateMetricsForm(updated);
+  currentMetrics = Object.assign(currentMetrics, updated);
+  populateMetricsForm(currentMetrics);
 
   await fetch('/api/metrics', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(updated)
+    body: JSON.stringify(currentMetrics)
   });
 
-  await evaluateRegional(updated);
+  await evaluateRegional(currentMetrics);
   toggleSimulatorDrawer(false);
 }
 
@@ -410,62 +259,63 @@ function resetToDefaultMetrics() {
     });
 }
 
-function renderMetricsChart() {
-  const ctx = document.getElementById('metricsChart');
-  if (!ctx) return;
+// File Upload & Sample
+async function handleFileSelect(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await fetch('/api/import-file', { method: 'POST', body: formData });
+  const data = await res.json();
+  if (data.status === 'success') {
+    applyImportedParsed(data.parsed_data);
+  }
+}
 
-  const months = ['9月', '10月', '11月', '12月', '1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月'];
+async function loadSampleData() {
+  const res = await fetch('/api/sample-import', { method: 'POST' });
+  const data = await res.json();
+  if (data.status === 'success') {
+    applyImportedParsed(data.parsed_data);
+  }
+}
 
-  if (metricsChart) metricsChart.destroy();
+async function applyImportedParsed(parsed) {
+  Object.assign(currentMetrics, parsed);
+  populateMetricsForm(currentMetrics);
+  await fetch('/api/metrics', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(currentMetrics)
+  });
+  await evaluateRegional(currentMetrics);
+  alert('⚡ レセコンデータの実績9項目 ＆ 後発品割合を自動集計・反映しました！');
+}
 
-  metricsChart = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: months,
-      datasets: [
-        {
-          label: '在宅訪問実績 (件/月)',
-          data: [1, 2, 2, 1, 2, 2, 2, 2, 2, 2, 2, 2],
-          borderColor: '#059669',
-          backgroundColor: 'rgba(5, 150, 105, 0.1)',
-          tension: 0.3,
-          fill: true
-        },
-        {
-          label: 'かかりつけ指導 (件/月)',
-          data: [3, 3, 4, 3, 3, 4, 3, 3, 3, 3, 3, 3],
-          borderColor: '#3b82f6',
-          backgroundColor: 'rgba(59, 130, 246, 0.1)',
-          tension: 0.3,
-          fill: false
-        },
-        {
-          label: '服薬情報等提供 (件/月)',
-          data: [1, 1, 1, 2, 1, 1, 2, 1, 1, 2, 1, 1],
-          borderColor: '#8b5cf6',
-          backgroundColor: 'rgba(139, 92, 246, 0.1)',
-          tension: 0.3,
-          fill: false
-        }
-      ]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { position: 'top', labels: { boxWidth: 10, font: { size: 10 } } }
-      },
-      scales: {
-        y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 9 } } },
-        x: { ticks: { font: { size: 9 } } }
+function setupDropZone() {
+  const zone = document.getElementById('dropZone');
+  if (!zone) return;
+  ['dragenter', 'dragover'].forEach(name => {
+    zone.addEventListener(name, (e) => { e.preventDefault(); zone.classList.add('drop-zone-active'); });
+  });
+  ['dragleave', 'drop'].forEach(name => {
+    zone.addEventListener(name, (e) => { e.preventDefault(); zone.classList.remove('drop-zone-active'); });
+  });
+  zone.addEventListener('drop', async (e) => {
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      const formData = new FormData();
+      formData.append('file', files[0]);
+      const res = await fetch('/api/import-file', { method: 'POST', body: formData });
+      const data = await res.json();
+      if (data.status === 'success') {
+        applyImportedParsed(data.parsed_data);
       }
     }
   });
 }
 
-// ----------------------------------------------------
-// Patient Billing Navigator Logic
-// ----------------------------------------------------
+// Patient Navigator Logic
 function getPatientConditionFromUI() {
   return {
     patient_name: '来局患者様',
@@ -476,15 +326,9 @@ function getPatientConditionFromUI() {
     has_narcotics: document.getElementById('pNarcotics').checked,
     has_high_risk_drug: document.getElementById('pHighRisk').checked,
     has_anticancer_drug: document.getElementById('pCancer').checked,
-    has_inhalation_drug: document.getElementById('pInhale').checked,
-    is_first_inhalation_or_device_change: document.getElementById('pInhaleFirst').checked,
-    has_leftover_drugs: document.getElementById('pLeftover').checked,
-    has_prescription_query_changed: false,
     is_new_drug_or_dosage_changed: document.getElementById('pFollowUp').checked,
-    has_doctor_feedback_requested: false,
-    has_spontaneous_doctor_feedback: document.getElementById('pTraceReport').checked,
-    has_hospital_discharge_cooperation: false,
-    is_pediatric_special: false
+    has_leftover_drugs: document.getElementById('pLeftover').checked,
+    has_spontaneous_doctor_feedback: document.getElementById('pTraceReport').checked
   };
 }
 
@@ -493,17 +337,13 @@ function triggerPatientEval() {
   if (evalTimeout) clearTimeout(evalTimeout);
   evalTimeout = setTimeout(async () => {
     const condition = getPatientConditionFromUI();
-    try {
-      const res = await fetch('/api/suggest-patient-billing', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(condition)
-      });
-      const result = await res.json();
-      renderPatientBillingResult(result);
-    } catch (err) {
-      console.error('Patient evaluation failed:', err);
-    }
+    const res = await fetch('/api/suggest-patient-billing', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(condition)
+    });
+    const result = await res.json();
+    renderPatientBillingResult(result);
   }, 100);
 }
 
@@ -517,7 +357,7 @@ function renderPatientBillingResult(result) {
   badgeContainer.innerHTML = '';
   result.regional_contributions.forEach(badgeText => {
     const span = document.createElement('span');
-    span.className = 'bg-amber-400 text-slate-900 text-[10px] sm:text-xs px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full font-bold shadow-sm flex items-center gap-1';
+    span.className = 'bg-amber-400 text-slate-900 text-[10px] sm:text-xs px-2 py-0.5 rounded-full font-bold shadow-sm flex items-center gap-1';
     span.innerHTML = `<i data-lucide="star" class="w-3 h-3 fill-current text-slate-900"></i> ${badgeText}`;
     badgeContainer.appendChild(span);
   });
@@ -535,64 +375,32 @@ function renderPatientBillingResult(result) {
   container.innerHTML = '';
   document.getElementById('patientItemCount').innerText = `${result.recommended_items.length} 件算定可能`;
 
-  if (result.recommended_items.length === 0) {
-    container.innerHTML = `
-      <div class="p-6 text-center bg-white rounded-xl border border-slate-200 text-slate-400">
-        <i data-lucide="info" class="w-6 h-6 mx-auto mb-1.5 opacity-50"></i>
-        <p class="text-xs">算定可能な個別加算はありません。基本の服薬管理指導料を算定してください。</p>
-      </div>
-    `;
-    lucide.createIcons();
-    return;
-  }
-
   result.recommended_items.forEach(item => {
     const card = document.createElement('div');
-    card.className = 'bg-white rounded-xl shadow-sm border border-slate-200 p-3.5 sm:p-4 space-y-2 sm:space-y-2.5';
-    
-    let contribBadgeHtml = '';
-    if (item.contributes_to_regional_support) {
-      contribBadgeHtml = `
-        <div class="bg-emerald-50 border border-emerald-200 rounded-md px-2 py-1 text-[10px] sm:text-[11px] text-emerald-800 font-bold flex items-center gap-1">
-          <i data-lucide="award" class="w-3 h-3 text-emerald-600"></i>
-          <span>${item.contributes_to_regional_support}</span>
-        </div>
-      `;
-    }
-
+    card.className = 'bg-white rounded-xl shadow-sm border border-slate-200 p-3.5 space-y-2';
     card.innerHTML = `
       <div class="flex justify-between items-start gap-2">
         <div>
-          <span class="text-[9px] sm:text-[10px] font-bold bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">${item.category}</span>
+          <span class="text-[9px] font-bold bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">${item.category}</span>
           <h4 class="text-xs sm:text-sm font-bold text-slate-900 mt-0.5">${item.name}</h4>
         </div>
         <div class="text-right shrink-0">
-          <span class="text-sm sm:text-base font-black text-emerald-700">+${item.points} 点</span>
-          <div class="text-[9px] sm:text-[10px] text-slate-400">${item.points * 10}円分</div>
+          <span class="text-sm sm:text-base font-black text-emerald-800">+${item.points} 点</span>
+          <div class="text-[9px] text-slate-400">${item.points * 10}円分</div>
         </div>
       </div>
-
-      <p class="text-[11px] sm:text-xs text-slate-600 leading-snug">${item.description}</p>
-
-      ${contribBadgeHtml}
-
-      <div class="bg-slate-50 border border-slate-200 rounded-lg p-2 sm:p-2.5 text-xs">
+      <p class="text-[11px] text-slate-600 leading-snug">${item.description}</p>
+      <div class="bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs">
         <div class="flex justify-between items-center mb-1">
-          <span class="font-bold text-[10px] sm:text-xs text-slate-700 flex items-center gap-1">
-            <i data-lucide="file-edit" class="w-3 h-3 text-emerald-600"></i>
-            薬歴記載の必須要点（監査対策）
+          <span class="font-bold text-[10px] text-slate-700 flex items-center gap-1">
+            <i data-lucide="file-edit" class="w-3 h-3 text-emerald-600"></i> 薬歴記載の要点
           </span>
-          <button onclick="copyChartText('${item.name}: ${item.chart_notes}')" class="text-[10px] text-emerald-700 hover:text-emerald-800 font-bold flex items-center gap-1 bg-white px-2 py-0.5 rounded border border-slate-200 shadow-2xs">
-            <i data-lucide="copy" class="w-3 h-3"></i> コピー
-          </button>
         </div>
-        <p class="text-[10px] sm:text-[11px] text-slate-600 leading-normal">${item.chart_notes}</p>
+        <p class="text-[10px] text-slate-600 leading-normal">${item.chart_notes}</p>
       </div>
     `;
-
     container.appendChild(card);
   });
-
   lucide.createIcons();
 }
 
@@ -604,105 +412,48 @@ function resetPatientCondition() {
   document.getElementById('pNarcotics').checked = false;
   document.getElementById('pHighRisk').checked = true;
   document.getElementById('pCancer').checked = false;
-  document.getElementById('pInhale').checked = false;
-  document.getElementById('pInhaleFirst').checked = false;
-  document.getElementById('inhaleChildBox').classList.add('hidden');
   document.getElementById('pFollowUp').checked = true;
   document.getElementById('pLeftover').checked = false;
   document.getElementById('pTraceReport').checked = false;
-
   triggerPatientEval();
 }
 
-function copyChartText(text) {
-  navigator.clipboard.writeText(text).then(() => {
-    alert('薬歴テンプレート文をコピーしました！電子薬歴に貼り付けてご利用ください。');
-  });
-}
-
-// ----------------------------------------------------
-// Report & Printing Logic
-// ----------------------------------------------------
 function updateReportView() {
   if (!currentMetrics || !regionalResult) return;
-
   const today = new Date();
-  const dateStr = `${today.getFullYear()}年${today.getMonth() + 1}月${today.getDate()}日（${['日','月','火','水','木','金','土'][today.getDay()]}）`;
+  const dateStr = `${today.getFullYear()}年${today.getMonth() + 1}月${today.getDate()}日`;
   document.getElementById('reportDate').innerText = dateStr;
   document.getElementById('reportPharmacyName').innerText = currentMetrics.pharmacy_name;
   document.getElementById('reportCurrentTier').innerText = regionalResult.current_tier;
-
   document.getElementById('repTier').innerText = regionalResult.current_tier;
   document.getElementById('repPoints').innerText = `+${regionalResult.points_earned}`;
-  document.getElementById('repSupply').innerText = regionalResult.supply_system_addition_qualified ? '適合' : '未達';
-  document.getElementById('repStock').innerText = currentMetrics.stock_drugs_count;
-  document.getElementById('repGeneric').innerText = currentMetrics.generic_percentage.toFixed(1);
+  document.getElementById('repGeneric').innerText = `${currentMetrics.generic_percentage.toFixed(1)}%`;
+  document.getElementById('repDevice').innerText = `${currentMetrics.self_medication_device_count}種設置`;
 
-  // Focus list
-  const focusList = document.getElementById('reportFocusList');
-  focusList.innerHTML = '';
-  regionalResult.performance_actions.forEach(act => {
-    const li = document.createElement('li');
-    li.innerText = act;
-    focusList.appendChild(li);
-  });
-  if (regionalResult.performance_actions.length === 0) {
-    const li = document.createElement('li');
-    li.innerText = '全実績基準をクリア中！現在の算定ペースを維持しましょう。';
-    focusList.appendChild(li);
-  }
-
-  // 1. Performance Requirements Table
   const perfTbody = document.getElementById('reportPerfTableBody');
   perfTbody.innerHTML = '';
   regionalResult.performance_requirements.forEach(req => {
     const tr = document.createElement('tr');
-    const isOk = req.is_satisfied;
-    tr.className = isOk ? 'bg-white' : 'bg-amber-50/50';
+    tr.className = req.is_satisfied ? 'bg-white' : 'bg-amber-50/50';
     tr.innerHTML = `
-      <td class="border border-slate-200 p-1.5 sm:p-2 font-bold text-slate-800">${req.name}</td>
-      <td class="border border-slate-200 p-1.5 sm:p-2 text-center">${req.current_value_text}</td>
-      <td class="border border-slate-200 p-1.5 sm:p-2 text-center text-slate-500">${req.target_value_text}</td>
-      <td class="border border-slate-200 p-1.5 sm:p-2 text-center font-semibold">${req.progress_percentage}%</td>
-      <td class="border border-slate-200 p-1.5 sm:p-2 text-center">
-        <span class="px-1.5 py-0.5 rounded text-[9px] sm:text-[10px] font-bold ${isOk ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">
-          ${isOk ? 'OK' : '不足'}
+      <td class="border border-slate-200 p-1.5 font-bold text-slate-800">${req.name}</td>
+      <td class="border border-slate-200 p-1.5 text-center">${req.current_value_text}</td>
+      <td class="border border-slate-200 p-1.5 text-center text-slate-500">${req.target_value_text}</td>
+      <td class="border border-slate-200 p-1.5 text-center">
+        <span class="px-1.5 py-0.5 rounded text-[9px] font-bold ${req.is_satisfied ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">
+          ${req.is_satisfied ? '達成' : '不足'}
         </span>
       </td>
-      <td class="border border-slate-200 p-1.5 sm:p-2 text-slate-600 leading-tight text-[10px] sm:text-xs">${req.advice}</td>
+      <td class="border border-slate-200 p-1.5 text-slate-600 text-[10px]">${req.advice}</td>
     `;
     perfTbody.appendChild(tr);
   });
-
-  // 2. Structural Requirements Table
-  const structTbody = document.getElementById('reportStructTableBody');
-  structTbody.innerHTML = '';
-  regionalResult.structural_requirements.forEach(req => {
-    const tr = document.createElement('tr');
-    const isOk = req.is_satisfied;
-    tr.className = isOk ? 'bg-white' : 'bg-rose-50/50';
-    tr.innerHTML = `
-      <td class="border border-slate-200 p-1.5 sm:p-2 font-bold text-slate-800">${req.name}</td>
-      <td class="border border-slate-200 p-1.5 sm:p-2 text-center font-bold">${req.current_value_text}</td>
-      <td class="border border-slate-200 p-1.5 sm:p-2 text-center text-slate-500">${req.target_value_text}</td>
-      <td class="border border-slate-200 p-1.5 sm:p-2 text-center">
-        <span class="px-1.5 py-0.5 rounded text-[9px] sm:text-[10px] font-bold ${isOk ? 'bg-blue-100 text-blue-800' : 'bg-rose-100 text-rose-800'}">
-          ${isOk ? 'クリア' : '要整備'}
-        </span>
-      </td>
-      <td class="border border-slate-200 p-1.5 sm:p-2 text-slate-600 leading-tight text-[10px] sm:text-xs">${req.advice}</td>
-    `;
-    structTbody.appendChild(tr);
-  });
-
   lucide.createIcons();
 }
 
 function printReport() {
   switchTab('report');
-  setTimeout(() => {
-    window.print();
-  }, 300);
+  setTimeout(() => { window.print(); }, 300);
 }
 
 document.addEventListener('DOMContentLoaded', () => {

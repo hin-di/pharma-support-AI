@@ -11,9 +11,8 @@ from app.rules.patient_billing import evaluate_patient_billing
 from app.parsers.uke_parser import parse_uke_content
 from app.parsers.csv_parser import parse_csv_content
 
-app = FastAPI(title="Pharma Support AI - 薬局業務・加算管理システム")
+app = FastAPI(title="Pharma Support AI - 令和8年度改定完全準拠版")
 
-# Mount static and templates
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 templates = Jinja2Templates(directory="app/templates")
 
@@ -26,9 +25,12 @@ def index(request: Request):
 @app.get("/api/metrics")
 def get_metrics():
     if os.path.exists(MOCK_DATA_PATH):
-        with open(MOCK_DATA_PATH, "r", encoding="utf-8") as f:
-            data = json.load(f)
-            return data
+        try:
+            with open(MOCK_DATA_PATH, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                return data
+        except Exception:
+            pass
     return get_default_metrics().model_dump()
 
 @app.post("/api/metrics")
@@ -50,13 +52,9 @@ def api_suggest_patient_billing(condition: PatientCondition):
 
 @app.post("/api/import-file")
 async def api_import_file(file: UploadFile = File(...)):
-    """
-    UKEファイルまたはCSVファイルを読み込み、実績値を自動集計して返す。
-    """
     content_bytes = await file.read()
     filename = file.filename or ""
     
-    # 文字コード判別 (CP932/Shift_JIS または UTF-8)
     try:
         content = content_bytes.decode('cp932')
     except UnicodeDecodeError:
@@ -75,19 +73,20 @@ async def api_import_file(file: UploadFile = File(...)):
 
 @app.post("/api/sample-import")
 def api_sample_import():
-    """
-    デモ用: 架空のレセ電（UKEデータ）をシミュレーション解析して実績を自動更新する。
-    """
     sample_result = {
         "format": "レセプト電算データ (UKE解析シミュレーション)",
         "monthly_prescriptions": 1350,
-        "narcotics_count": 5,
-        "home_visit_count": 28,
-        "family_pharmacist_count": 46,
-        "info_provision_count": 18,
-        "preavoid_count": 3,
-        "generic_percentage": 86.4,
-        "message": "レセプト電算データから実績値を自動集計しました（全要件達成・地域支援体制加算1適合）"
+        "generic_percentage": 87.2,
+        "rec_1_night_holiday_count": 52,
+        "rec_2_narcotics_count": 4,
+        "rec_3_prevention_adjustment_count": 35,
+        "rec_4_guidance_1a_2a_count": 38,
+        "rec_5_outpatient_support_1_count": 3,
+        "rec_6_home_visit_count": 28,
+        "rec_7_info_provision_tr_count": 42,
+        "rec_8_pediatric_special_count": 2,
+        "rec_9_multidisciplinary_conference_count": 2,
+        "message": "レセプト電算データから実績9項目及び後発品87.2%を抽出・集計しました。"
     }
     return {
         "status": "success",
