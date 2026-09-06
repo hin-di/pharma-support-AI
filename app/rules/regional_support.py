@@ -8,10 +8,17 @@ from app.models.schemas import (
 def get_default_metrics() -> PharmacyMetrics:
     return PharmacyMetrics()
 
+# 令和8年度 告示規定の対象調剤基本料マスター
+ADD01_ELIGIBLE_FEES = {"basic_1"}
+ADD02_ELIGIBLE_FEES = {"basic_1"}
+ADD03_ELIGIBLE_FEES = {"basic_1"}
+ADD04_ELIGIBLE_FEES = {"basic_2", "basic_3_a", "basic_3_b", "basic_3_c", "special_a"}
+ADD05_ELIGIBLE_FEES = {"basic_2", "basic_3_a", "basic_3_b", "basic_3_c", "special_a"}
+
 def evaluate_regional_support(metrics: PharmacyMetrics) -> RegionalEvaluationResult:
     """
     厚生労働省 令和8年度（2026年6月1日施行）調剤報酬点数表・告示・施設基準通知
-    「地域支援・医薬品供給対応体制加算1〜5」完全適合判定エンジン
+    「地域支援・医薬品供給対応体制加算1〜5」完全適合判定エンジン (v2.2)
     """
     audit_trail: List[str] = []
     supply_reqs: List[RequirementStatus] = []
@@ -22,21 +29,21 @@ def evaluate_regional_support(metrics: PharmacyMetrics) -> RegionalEvaluationRes
     struct_actions: List[str] = []
     perf_actions: List[str] = []
 
-    # =========================================================================
-    # 1. 処方箋受付回数1万回当たりの補正係数の算出（様式87の3の2）
-    # =========================================================================
+    # 1. 処方箋受付回数1万回当たりの補正係数算出（様式87の3の2）
     annual_rx = metrics.annual_prescriptions or (metrics.monthly_prescriptions * 12)
-    # 直近1年間の受付回数が1万回未満の場合は1万回とみなす
     adjusted_rx_base = max(10000, annual_rx)
     rx_factor = adjusted_rx_base / 10000.0
 
+    audit_trail.append(f"・調剤基本料区分: {metrics.dispensing_basic_fee_type}")
     audit_trail.append(f"・直近1年間の総処方箋受付回数: {annual_rx:,} 枚（補正基準枚数: {adjusted_rx_base:,} 枚, 係数: {rx_factor:.2f}）")
-    audit_trail.append(f"・後発品割合 評価期間: {metrics.generic_ratio_period}")
+    audit_trail.append(f"・後発品割合 評価期間: {metrics.generic_ratio_period} (規格単位数量ベース)")
     audit_trail.append(f"・実績要件 評価期間: {metrics.performance_period}")
 
-    # =========================================================================
+    # 特別調剤基本料Bの事前チェック
+    if metrics.dispensing_basic_fee_type == "special_b":
+        audit_trail.append("【基本料制限】特別調剤基本料Bは告示上、加算1〜5のすべての対象外となります。")
+
     # 2. 様式87の3の1：医薬品供給対応体制（全加算共通 8項目）の判定
-    # =========================================================================
     ge_rate = metrics.generic_percentage_special_applied if metrics.temporary_exclusion_enabled else metrics.generic_percentage
     ge_ok = ge_rate >= 85.0
     ge_progress = round((ge_rate / 85.0) * 100, 1)
@@ -58,17 +65,17 @@ def evaluate_regional_support(metrics: PharmacyMetrics) -> RegionalEvaluationRes
         supply_actions.append(f"後発医薬品調剤割合が {ge_rate:.1f}%（基準: 85.0%）で未達です。")
 
     supply_items = [
-        ("REQ-SUP-02", "計画的調達・在庫管理体制", metrics.has_planned_procurement, "様式87の3の1 第(1)項"),
-        ("REQ-SUP-03", "近隣保険薬局への医薬品分譲実績", metrics.has_drug_distribution_record, "様式87の3の1 第(2)項"),
-        ("REQ-SUP-04", "供給不足時の代替調剤・疑義照会手順書の策定", metrics.has_shortage_response_protocol, "様式87の3の1 第(3)項"),
-        ("REQ-SUP-05", "医薬品卸との原則単品単価交渉", metrics.has_single_item_negotiation, "様式87の3の1 第(4)項"),
-        ("REQ-SUP-06", "急配・頻回配送の抑制手順", metrics.has_rush_delivery_prevention, "様式87の3の1 第(5)項"),
-        ("REQ-SUP-07", "在庫調整目的の返品抑制手順", metrics.has_return_suppression, "様式87の3の1 第(6)項"),
-        ("REQ-SUP-08", "後発医薬品調剤の積極的推進の掲示", metrics.has_generic_promotion_notice, "様式87の3の1 第(7)項")
+        ("REQ-SUP-02", "計画的調達・在庫管理体制", metrics.has_planned_procurement, "様式87の3の1 第(1)項", "計画的発注及び適正在庫管理の実施"),
+        ("REQ-SUP-03", "近隣保険薬局への医薬品分譲実績", metrics.has_drug_distribution_record, "様式87の3の1 第(2)項", "地域内保険薬局との医薬品融通・分譲実績の記録・保管"),
+        ("REQ-SUP-04", "供給不足時の代替調剤・疑義照会手順書の策定", metrics.has_shortage_response_protocol, "様式87の3の1 第(3)項", "供給困難時の代替薬提案・医師への疑義照会プロトコル策定"),
+        ("REQ-SUP-05", "医薬品卸との原則単品単価交渉", metrics.has_single_item_negotiation, "様式87の3の1 第(4)項", "医薬品卸との品目ごとの単品単価契約交渉の実施"),
+        ("REQ-SUP-06", "急配・頻回配送の抑制手順", metrics.has_rush_delivery_prevention, "様式87の3の1 第(5)項", "配送効率化および緊急時以外の頻回配送抑制の取り組み"),
+        ("REQ-SUP-07", "在庫調整目的の返品抑制手順", metrics.has_return_suppression, "様式87の3の1 第(6)項", "返品前提の発注見直しおよび在庫適正化の推進"),
+        ("REQ-SUP-08", "後発医薬品調剤の積極的推進の掲示", metrics.has_generic_promotion_notice, "様式87の3の1 第(7)項", "薬局内における後発医薬品推進に関する周知・掲示")
     ]
 
     supply_bools_ok = True
-    for sid, sname, sval, sref in supply_items:
+    for sid, sname, sval, sref, sadvice in supply_items:
         s_ok = bool(sval)
         if not s_ok:
             supply_bools_ok = False
@@ -82,16 +89,15 @@ def evaluate_regional_support(metrics: PharmacyMetrics) -> RegionalEvaluationRes
             target_value_text="必須",
             is_satisfied=s_ok,
             progress_percentage=100.0 if s_ok else 0.0,
-            shortage_text="充足" if s_ok else "要確認",
-            official_ref=sref
+            shortage_text="充足" if s_ok else "未充足（要確認）",
+            official_ref=sref,
+            advice=sadvice
         ))
 
     supply_system_qualified = ge_ok and supply_bools_ok
     audit_trail.append(f"【様式87の3の1 供給体制】: {'適合 (全8項目充足)' if supply_system_qualified else '不適合'}")
 
-    # =========================================================================
     # 3. 地域医療への貢献に係る十分な体制（加算2・加算4 共通要件群）
-    # =========================================================================
     stock_ok = metrics.stock_drugs_count >= 1200
     struct_reqs.append(RequirementStatus(
         id="REQ-STR-01",
@@ -102,8 +108,9 @@ def evaluate_regional_support(metrics: PharmacyMetrics) -> RegionalEvaluationRes
         target_value_text="1,200 品目以上",
         is_satisfied=stock_ok,
         progress_percentage=round(min(100.0, (metrics.stock_drugs_count / 1200.0) * 100), 1),
-        shortage_text="充足" if stock_ok else f"あと {1200 - metrics.stock_drugs_count} 品目不足",
-        official_ref="施設基準通知 第8の2(2)イ"
+        shortage_text="充足" if stock_ok else f"未充足 (不足: {1200 - metrics.stock_drugs_count} 品目)",
+        official_ref="施設基準通知 第8の2(2)イ",
+        advice="主たる保険医療機関の処方箋のみならず幅広い医療用医薬品の備蓄（1,200品目以上）"
     ))
     if not stock_ok:
         struct_actions.append(f"備蓄医薬品数が {metrics.stock_drugs_count} 品目で基準（1,200品目）に未達です。")
@@ -118,25 +125,26 @@ def evaluate_regional_support(metrics: PharmacyMetrics) -> RegionalEvaluationRes
         target_value_text="3 種類以上",
         is_satisfied=device_ok,
         progress_percentage=round(min(100.0, (metrics.self_medication_device_count / 3.0) * 100), 1),
-        shortage_text="充足" if device_ok else f"あと {3 - metrics.self_medication_device_count} 種類不足",
-        official_ref="施設基準通知 第8の2(2)イ"
+        shortage_text="充足" if device_ok else f"未充足 (不足: {3 - metrics.self_medication_device_count} 種類)",
+        official_ref="施設基準通知 第8の2(2)イ",
+        advice="血圧計・自己血糖測定器・体組成計等の指定8機器中3種類以上の常設"
     ))
     if not device_ok:
         struct_actions.append(f"セルフメディケーション機器が {metrics.self_medication_device_count} 種で基準（3種以上）に未達です。")
 
     struct_items = [
-        ("REQ-STR-02", "24時間調剤及び在宅対応体制", metrics.has_24h_system, "施設基準通知 第8の2(2)イ"),
-        ("REQ-STR-03", "麻薬小売業免許及び管理保管設備", metrics.has_narcotics_license, "施設基準通知 第8の2(2)イ"),
-        ("REQ-STR-04", "無菌製剤処理の自店実施又は共同利用体制", metrics.has_sterile_preparation_system, "施設基準通知 第8の2(2)イ"),
-        ("REQ-STR-05", "医療DX推進体制（電子処方箋・オン資等）", metrics.has_medical_dx_system, "施設基準通知 第8の2(2)イ"),
-        ("REQ-STR-06", "新興感染症第二種指定協定締結等の体制", metrics.has_infection_agreement, "感染症法第38条"),
-        ("REQ-STR-07", "要指導・一般用医薬品の備蓄販売 (48薬効群以上)", metrics.otc_drug_categories_count >= 48, "施設基準通知 第8の2(2)イ"),
-        ("REQ-STR-08", "個別服薬指導相談カウンターの設置", metrics.has_private_counseling_counter, "施設基準通知 第8の2(2)イ"),
-        ("REQ-STR-10", "医療材料・衛生材料供給及び高度管理医療機器許可", metrics.has_medical_equipment_sales_license, "施設基準通知 第8の2(2)イ")
+        ("REQ-STR-02", "24時間調剤及び在宅対応体制", metrics.has_24h_system, "施設基準通知 第8の2(2)イ", "開局時間外の電話対応体制及び夜間・休日の調剤・在宅訪問体制の確保"),
+        ("REQ-STR-03", "麻薬小売業免許及び管理保管設備", metrics.has_narcotics_license, "施設基準通知 第8の2(2)イ", "麻薬小売業者免許の取得及び麻薬専用金庫による保管管理"),
+        ("REQ-STR-04", "無菌製剤処理の自店実施又は共同利用体制", metrics.has_sterile_preparation_system, "施設基準通知 第8の2(2)イ", "自店におけるクリーンベンチ等設置または他施設無菌調剤室の共同利用協定"),
+        ("REQ-STR-05", "医療DX推進体制（電子処方箋・オン資等）", metrics.has_medical_dx_system, "施設基準通知 第8の2(2)イ", "オンライン資格確認・電子処方箋・電子カルテ情報共有サービスの導入運用"),
+        ("REQ-STR-06", "新興感染症第二種指定協定締結等の体制", metrics.has_infection_agreement, "感染症法第38条", "都道府県等との第二種指定医療機関協定（感染症法第38条）等の締結"),
+        ("REQ-STR-07", "要指導・一般用医薬品の備蓄販売 (48薬効群以上)", metrics.otc_drug_categories_count >= 48, "施設基準通知 第8の2(2)イ", "指定48薬効群以上の要指導医薬品・一般用医薬品の常時備蓄販売"),
+        ("REQ-STR-08", "個別服薬指導相談カウンターの設置", metrics.has_private_counseling_counter, "施設基準通知 第8の2(2)イ", "患者のプライバシーに配慮した仕切り付き個別相談カウンターの設置"),
+        ("REQ-STR-10", "医療材料・衛生材料の供給体制", metrics.has_medical_equipment_sales_license, "施設基準通知 第8の2(2)イ", "高度管理医療機器等販売業許可及び吸引器等の衛生材料・医療機器の供給体制")
     ]
 
     other_struct_ok = True
-    for stid, stname, stval, stref in struct_items:
+    for stid, stname, stval, stref, stadvice in struct_items:
         st_ok = bool(stval)
         if not st_ok:
             other_struct_ok = False
@@ -151,25 +159,24 @@ def evaluate_regional_support(metrics: PharmacyMetrics) -> RegionalEvaluationRes
             is_satisfied=st_ok,
             progress_percentage=100.0 if st_ok else 0.0,
             shortage_text="充足" if st_ok else "要整備",
-            official_ref=stref
+            official_ref=stref,
+            advice=stadvice
         ))
 
     structural_system_qualified = stock_ok and device_ok and other_struct_ok
     audit_trail.append(f"【地域医療貢献に係る十分な体制】: {'適合' if structural_system_qualified else '不適合'}")
 
-    # =========================================================================
     # 4. 様式87の3の2：地域医療貢献実績（全9項目）の補正後評価
-    # =========================================================================
     raw_perf_specs = [
-        ("REQ-PRF-01", "(1) 時間外加算等・夜間休日等加算等の調剤実績", metrics.rec_1_night_holiday_count, 40, 400, "回", "様式87の3の2 (1)"),
-        ("REQ-PRF-02", "(2) 麻薬の調剤実績", metrics.rec_2_narcotics_count, 1, 10, "回", "様式87の3の2 (2)"),
-        ("REQ-PRF-03", "(3) 調剤時残薬調整加算及び薬学的有害事象等防止加算等の実績", metrics.rec_3_prevention_adjustment_count, 20, 40, "回", "様式87の3の2 (3)"),
-        ("REQ-PRF-04", "(4) 服薬管理指導料1の「イ」及び2の「イ」の算定実績【必須】", metrics.rec_4_guidance_1a_2a_count, 20, 40, "回", "様式87の3の2 (4)"),
-        ("REQ-PRF-05", "(5) 外来服薬支援料1の算定実績", metrics.rec_5_outpatient_support_1_count, 1, 12, "回", "様式87の3の2 (5)"),
-        ("REQ-PRF-06", "(6) 訪問薬剤管理指導料等の算定実績【加算4必須】", metrics.rec_6_home_visit_count, 24, 24, "回", "様式87の3の2 (6)"),
-        ("REQ-PRF-07", "(7) 服薬情報等提供料等の算定実績", metrics.rec_7_info_provision_tr_count, 30, 60, "回", "様式87の3の2 (7)"),
-        ("REQ-PRF-08", "(8) 小児特定加算等の算定実績", metrics.rec_8_pediatric_special_count, 1, 1, "回", "様式87の3の2 (8)"),
-        ("REQ-PRF-09", "(9) 認定研修取得薬剤師による地域多職種連携会議出席実績", metrics.rec_9_multidisciplinary_conference_count, 1, 5, "回", "様式87の3の2 (9)")
+        ("REQ-PRF-01", "(1) 時間外加算等・夜間休日等加算等の調剤実績", metrics.rec_1_night_holiday_count, 40, 400, "回", "様式87の3の2 (1)", "夜間・休日等の調剤対応実績（時間外加算、夜間休日等加算等）"),
+        ("REQ-PRF-02", "(2) 麻薬の調剤実績", metrics.rec_2_narcotics_count, 1, 10, "回", "様式87の3の2 (2)", "麻薬処方箋の調剤及び服薬指導実績"),
+        ("REQ-PRF-03", "(3) 調剤時残薬調整加算及び薬学的有害事象等防止加算等の実績", metrics.rec_3_prevention_adjustment_count, 20, 40, "回", "様式87の3の2 (3)", "疑義照会による残薬解消・重複投薬防止等の薬学的介入実績"),
+        ("REQ-PRF-04", "(4) 服薬管理指導料1の「イ」及び2の「イ」の算定実績【必須】", metrics.rec_4_guidance_1a_2a_count, 20, 40, "回", "様式87の3の2 (4)", "手帳持参患者に対する服薬管理指導（加算2・4の必須要件）"),
+        ("REQ-PRF-05", "(5) 外来服薬支援料1の算定実績", metrics.rec_5_outpatient_support_1_count, 1, 12, "回", "様式87の3の2 (5)", "一包化・服薬カレンダー等による患者の服薬整理・継続支援実績"),
+        ("REQ-PRF-06", "(6) 訪問薬剤管理指導料等の算定実績【加算4必須】", metrics.rec_6_home_visit_count, 24, 24, "回", "様式87の3の2 (6)", "在宅患者訪問薬剤管理指導・居宅療養管理指導実績（加算4の必須要件）"),
+        ("REQ-PRF-07", "(7) 服薬情報等提供料等の算定実績", metrics.rec_7_info_provision_tr_count, 30, 60, "回", "様式87の3の2 (7)", "医師・医療機関に対する服薬状況・提案等のトレーシングレポート提供"),
+        ("REQ-PRF-08", "(8) 小児特定加算等の算定実績", metrics.rec_8_pediatric_special_count, 1, 1, "回", "様式87の3の2 (8)", "6歳未満の乳幼児に対するきめ細やかな指導実績"),
+        ("REQ-PRF-09", "(9) 認定研修取得薬剤師による地域多職種連携会議出席実績", metrics.rec_9_multidisciplinary_conference_count, 1, 5, "回", "様式87の3の2 (9)", "地域ケア会議・退院時カンファレンス等の多職種連携会議出席実績")
     ]
 
     tier2_satisfied_count = 0
@@ -178,7 +185,7 @@ def evaluate_regional_support(metrics: PharmacyMetrics) -> RegionalEvaluationRes
     req_targets_t2: List[int] = []
     req_targets_t4: List[int] = []
 
-    for _, _, _, t2_base, t4_base, _, _ in raw_perf_specs:
+    for _, _, _, t2_base, t4_base, _, _, _ in raw_perf_specs:
         req_targets_t2.append(math.ceil(t2_base * rx_factor))
         req_targets_t4.append(math.ceil(t4_base * rx_factor))
 
@@ -186,7 +193,7 @@ def evaluate_regional_support(metrics: PharmacyMetrics) -> RegionalEvaluationRes
     rec_4_tier4_ok = metrics.rec_4_guidance_1a_2a_count >= req_targets_t4[3]
     rec_6_tier4_ok = metrics.rec_6_home_visit_count >= req_targets_t4[5]
 
-    for idx, (pid, pname, pval, _, _, punit, pref) in enumerate(raw_perf_specs):
+    for idx, (pid, pname, pval, _, _, punit, pref, padvice) in enumerate(raw_perf_specs):
         t2_req = req_targets_t2[idx]
         t4_req = req_targets_t4[idx]
         
@@ -199,7 +206,7 @@ def evaluate_regional_support(metrics: PharmacyMetrics) -> RegionalEvaluationRes
             tier4_satisfied_count += 1
             
         prog_t2 = round(min(100.0, (pval / float(t2_req)) * 100), 1)
-        shortage = "充足" if is_t2_ok else f"あと {t2_req - pval} {punit}不足"
+        shortage = "充足" if is_t2_ok else f"未達 (不足: {t2_req - pval} {punit})"
         
         perf_reqs.append(RequirementStatus(
             id=pid,
@@ -211,47 +218,46 @@ def evaluate_regional_support(metrics: PharmacyMetrics) -> RegionalEvaluationRes
             is_satisfied=is_t2_ok,
             progress_percentage=prog_t2,
             shortage_text=shortage,
-            official_ref=pref
+            official_ref=pref,
+            advice=padvice
         ))
         if not is_t2_ok:
             perf_actions.append(f"【様式87-3-2】{pname}: 実績 {pval:,}/{t2_req:,} {punit}（{shortage}）")
 
-    # =========================================================================
     # 5. 加算1〜5の告示参照論理式による判定
-    # =========================================================================
-    is_basic_1 = metrics.dispensing_basic_fee_type == "basic_1"
-    is_not_special_b = metrics.dispensing_basic_fee_type != "special_b"
+    fee_type = metrics.dispensing_basic_fee_type
 
     # RULE-ADD01 (27点): 基本料1 ＋ 供給体制8項目
-    rule_add01 = is_basic_1 and supply_system_qualified
+    rule_add01 = (fee_type in ADD01_ELIGIBLE_FEES) and supply_system_qualified
 
     # RULE-ADD02 (59点): 基本料1 ＋ 加算1 ＋ 十分な体制 ＋ (4)>=基準 ＋ 3項目以上
     tier2_perf_qualified = rec_4_tier2_ok and (tier2_satisfied_count >= 3)
-    rule_add02 = is_basic_1 and rule_add01 and structural_system_qualified and tier2_perf_qualified
+    rule_add02 = (fee_type in ADD02_ELIGIBLE_FEES) and rule_add01 and structural_system_qualified and tier2_perf_qualified
 
-    # RULE-ADD03 (67点): 供給体制8項目 ＋ 体制一部 ＋ 実績7項目以上
+    # RULE-ADD03 (67点): 基本料1 ＋ 供給体制8項目 ＋ 十分な体制 ＋ 実績7項目以上
     tier3_perf_qualified = tier2_satisfied_count >= 7
-    rule_add03 = supply_system_qualified and tier3_perf_qualified
+    rule_add03 = (fee_type in ADD03_ELIGIBLE_FEES) and supply_system_qualified and structural_system_qualified and tier3_perf_qualified
 
-    # RULE-ADD04 (37点): 基本料1又は特別基本料B以外 ＋ 加算1 ＋ 十分な体制 ＋ (4)>=基準 ＋ (6)>=基準 ＋ 3項目以上
+    # RULE-ADD04 (37点): 特別基本料B以外 ＋ 加算1 ＋ 十分な体制 ＋ (4)>=基準 ＋ (6)>=基準 ＋ 3項目以上
     tier4_perf_qualified = rec_4_tier4_ok and rec_6_tier4_ok and (tier4_satisfied_count >= 3)
-    rule_add04 = (is_basic_1 or is_not_special_b) and rule_add01 and structural_system_qualified and tier4_perf_qualified
+    rule_add04 = (fee_type in ADD04_ELIGIBLE_FEES) and supply_system_qualified and structural_system_qualified and tier4_perf_qualified
 
-    # RULE-ADD05 (59点): 加算4の体制要件 ＋ 実績7項目以上
+    # RULE-ADD05 (59点): 特別基本料B以外 ＋ 加算4の体制要件 ＋ 実績7項目以上
     tier5_perf_qualified = tier4_satisfied_count >= 7
-    rule_add05 = structural_system_qualified and supply_system_qualified and tier5_perf_qualified
+    rule_add05 = (fee_type in ADD05_ELIGIBLE_FEES) and structural_system_qualified and supply_system_qualified and tier5_perf_qualified
 
+    # 最終加算の決定（最も有利な点数を選択）
     current_tier = "算定不可"
     tier_code = "none"
     points_earned = 0
     performance_system_qualified = False
 
-    if rule_add03 and not is_basic_1:
+    if rule_add03:
         current_tier = "地域支援・医薬品供給対応体制加算3"
         tier_code = "tier_3"
         points_earned = ADD03_POINTS  # 67点
         performance_system_qualified = True
-        summary_msg = f"調剤基本料1以外において実績7項目（現在{tier2_satisfied_count}項目）を満たし、加算3（{ADD03_POINTS}点）に適合しています。"
+        summary_msg = f"調剤基本料1において十分な体制及び実績7項目（現在{tier2_satisfied_count}項目）を満たし、加算3（{ADD03_POINTS}点）に適合しています。"
     elif rule_add02:
         current_tier = "地域支援・医薬品供給対応体制加算2"
         tier_code = "tier_2"
@@ -263,24 +269,24 @@ def evaluate_regional_support(metrics: PharmacyMetrics) -> RegionalEvaluationRes
         tier_code = "tier_5"
         points_earned = ADD05_POINTS  # 59点
         performance_system_qualified = True
-        summary_msg = f"高度な地域医療連携体制及び実績7項目を満たし、加算5（{ADD05_POINTS}点）に適合しています。"
-    elif rule_add04 and not is_basic_1:
+        summary_msg = f"調剤基本料1以外において十分な体制及び実績7項目を満たし、加算5（{ADD05_POINTS}点）に適合しています。"
+    elif rule_add04:
         current_tier = "地域支援・医薬品供給対応体制加算4"
         tier_code = "tier_4"
         points_earned = ADD04_POINTS  # 37点
         performance_system_qualified = True
-        summary_msg = f"特別調剤基本料B以外において十分な体制及び実績（必須の(4)・(6)を含む{tier4_satisfied_count}項目）を満たし、加算4（{ADD04_POINTS}点）に適合しています。"
+        summary_msg = f"調剤基本料1以外において十分な体制及び実績（必須の(4)・(6)を含む{tier4_satisfied_count}項目）を満たし、加算4（{ADD04_POINTS}点）に適合しています。"
     elif rule_add01:
         current_tier = "地域支援・医薬品供給対応体制加算1"
         tier_code = "tier_1"
         points_earned = ADD01_POINTS  # 27点
         performance_system_qualified = False
-        summary_msg = f"医薬品供給対応体制（様式87の3の1の8項目）を満たし、加算1（{ADD01_POINTS}点）に適合しています。"
+        summary_msg = f"調剤基本料1において医薬品供給対応体制（様式87の3の1の8項目）を満たし、加算1（{ADD01_POINTS}点）に適合しています。"
     else:
         current_tier = "算定不可"
         tier_code = "none"
         points_earned = 0
-        summary_msg = "現在、施設基準の必須要件（医薬品供給対応体制、十分な体制、または実績）に未達項目があります。"
+        summary_msg = "現在、施設基準の必須要件（対象調剤基本料区分、医薬品供給対応体制、十分な体制、または実績基準）に未達項目があります。"
 
     audit_trail.append(f"【最終判定結果】: {current_tier} ({points_earned}点 / 処方箋)")
 
