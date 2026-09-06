@@ -61,17 +61,19 @@ class PharmacyMetrics(BaseModel):
     has_return_suppression: bool = True        # (6) 返品抑制
     has_generic_promotion_notice: bool = True  # (7) 後発品積極調剤の掲示
     
-    # 2. 地域医療への貢献に係る十分な体制（加算2・4等）
-    stock_drugs_count: int = 1350              # 備蓄品目数 (>=1200品目)
-    has_24h_system: bool = True                # 24時間調剤・在宅体制
-    has_narcotics_license: bool = True         # 麻薬小売業免許
-    has_sterile_preparation_system: bool = True # 無菌調剤体制
-    has_medical_dx_system: bool = True         # 医療DX推進体制
-    has_infection_agreement: bool = True       # 感染症指定
-    otc_drug_categories_count: int = 50        # OTC備蓄 (>=48薬効群)
-    has_private_counseling_counter: bool = True # 個別相談カウンター
-    self_medication_device_count: int = 3      # セルフメディケーション機器設置数 (>=3種)
-    has_medical_equipment_sales_license: bool = True # 医療材料・高度管理医療機器
+    # 2. 地域医療への貢献に係る十分な体制（加算2: 1200品目以上 / 加算4: 1500品目以上）
+    stock_drugs_count: int = 1350              # 備蓄品目数 (基本料1: >=1200品目, 基本料1以外: >=1500品目)
+    has_24h_system: bool = True                # (2) 24時間調剤・在宅対応体制
+    has_narcotics_license: bool = True         # (3) 麻薬小売業免許及び管理保管設備
+    has_sterile_preparation_system: bool = True # (4) 無菌製剤処理体制（自店又は共同利用）
+    has_medical_dx_system: bool = True         # (5) 医療DX推進体制（電子処方箋・オン資等）
+    has_infection_agreement: bool = True       # (6) 感染症法第38条第二種協定指定等の体制
+    otc_drug_categories_count: int = 50        # (7) OTC備蓄販売 (>=48薬効群)
+    has_private_counseling_counter: bool = True # (8) 個別服薬指導相談カウンター
+    self_medication_device_count: int = 3      # (9) セルフメディケーション機器設置数 (8種中>=3種)
+    has_medical_materials_supply: bool = True  # (10) 医療材料・衛生材料の供給体制
+    has_medical_device_sales_license: bool = True # (10) 高度管理医療機器等販売業許可
+    has_medical_equipment_sales_license: Optional[bool] = None # 後方互換用エイリアス
     
     # 3. 地域医療への貢献に係る実績（様式87の3の2: 全9項目 (1)〜(9) 実績回数）
     rec_1_night_holiday_count: int = 60        # (1) 時間外・夜間休日等加算等 (基準: 40 / 400 /万枚)
