@@ -119,7 +119,7 @@
             </div>
           </div>
           <div class="mt-3 pt-2.5 border-t border-slate-100 text-[11px] sm:text-xs text-slate-600 flex justify-between">
-            <span>対象集合基準: <strong id="genericStatusText" class="text-emerald-700">適合</strong></span>
+            <span>供給体制: <strong id="genericStatusText" class="text-emerald-700">適合</strong></span>
             <span>備蓄: <strong id="statStockDrugs">--</strong> 品目</span>
           </div>
         </div>
@@ -128,11 +128,11 @@
           <div>
             <span class="text-[10px] sm:text-xs font-medium text-slate-300 uppercase tracking-wider">加算による年間収益影響（推定）</span>
             <div class="text-xl sm:text-2xl font-black text-emerald-400 mt-0.5 sm:mt-1" id="annualRevenueEst">¥ --</div>
-            <div class="text-[10px] sm:text-xs text-slate-400 mt-0.5">月間処方箋 <span id="statMonthlyRx">--</span> 枚換算</div>
+            <div class="text-[10px] sm:text-xs text-slate-400 mt-0.5">年間受付 <span id="statAnnualRx">--</span> 回（月平均 <span id="statMonthlyRx">--</span> 枚）</div>
           </div>
-          <div class="mt-2.5 pt-2 border-t border-slate-700/60 text-[10px] sm:text-xs text-slate-300 flex items-center gap-1.5">
-            <i data-lucide="calendar" class="w-3.5 h-3.5 text-emerald-400"></i>
-            <span>評価期間: 前年5/1〜当年4/30</span>
+          <div class="mt-2.5 pt-2 border-t border-slate-700/60 text-[10px] sm:text-xs text-slate-300 flex items-center justify-between">
+            <span class="flex items-center gap-1"><i data-lucide="calendar" class="w-3.5 h-3.5 text-emerald-400"></i> <span id="statEvalMode">継続判定（定例報告）</span></span>
+            <span class="text-[10px] text-emerald-300" id="statRxScale">1.00倍</span>
           </div>
         </div>
       </div>
@@ -179,14 +179,14 @@
           <div class="bg-white/80 rounded-lg p-3 border border-amber-200/60 space-y-1.5">
             <span class="font-bold text-amber-900 flex items-center gap-1">
               <i data-lucide="package-check" class="w-3.5 h-3.5 text-blue-600"></i>
-              【医薬品供給体制】様式87-3-1
+              【医薬品供給体制】全加算共通
             </span>
             <ul id="supplyActionList" class="space-y-1 text-[11px] text-slate-700 list-disc list-inside font-medium leading-relaxed"></ul>
           </div>
           <div class="bg-white/80 rounded-lg p-3 border border-amber-200/60 space-y-1.5">
             <span class="font-bold text-amber-900 flex items-center gap-1">
               <i data-lucide="building-2" class="w-3.5 h-3.5 text-purple-600"></i>
-              【十分な体制】機器3種・協定等
+              【十分な体制】加算2〜5共通
             </span>
             <ul id="structActionList" class="space-y-1 text-[11px] text-slate-700 list-disc list-inside font-medium leading-relaxed"></ul>
           </div>
@@ -211,7 +211,7 @@
                 地域医療への貢献に係る実績メーター（様式87の3の2 全9項目）
               </h3>
             </div>
-            <p class="text-[10px] sm:text-xs text-slate-500 mt-0.5">※ 加算2は(4)が必須＋3項目以上、加算4は(4)(6)が必須＋3項目以上、加算3・5は7項目以上。</p>
+            <p class="text-[10px] sm:text-xs text-slate-500 mt-0.5">※ 加算2は「(4)を含む3項目以上」、加算4は「(4)(6)を含む3項目以上」、加算3・5は「9項目中7項目以上」。(1)〜(8)は処方箋1万枚比例、(9)は薬局当たり年間実績。</p>
           </div>
           <button onclick="toggleSimulatorDrawer(true)" class="text-[11px] sm:text-xs bg-white hover:bg-slate-50 text-slate-700 px-2.5 py-1 rounded-lg border border-slate-300 font-semibold flex items-center gap-1 shadow-sm shrink-0">
             <i data-lucide="sliders" class="w-3 h-3 text-slate-500"></i>
@@ -222,33 +222,33 @@
         <div id="perfRequirementsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-4"></div>
       </div>
 
-      <!-- SECTION 2: 医薬品供給対応体制（様式87の3の1 共通8項目） -->
+      <!-- SECTION 2: 医薬品供給対応体制（様式87の3の1 全加算共通） -->
       <div class="space-y-2.5 pt-2">
         <div class="border-b border-slate-200 pb-2">
           <div class="flex items-center gap-2">
-            <span class="px-2 py-0.5 bg-blue-100 text-blue-800 text-[10px] font-bold rounded-full">共通土台</span>
+            <span class="px-2 py-0.5 bg-blue-100 text-blue-800 text-[10px] font-bold rounded-full">全加算共通土台</span>
             <h3 class="text-sm sm:text-base font-black text-slate-900 flex items-center gap-1.5">
               <i data-lucide="package-check" class="w-4 h-4 text-blue-600"></i>
-              医薬品供給対応体制チェック（様式87の3の1 全加算共通8項目）
+              医薬品供給対応体制チェック（様式87の3の1 加算1〜5共通）
             </h3>
           </div>
-          <p class="text-[10px] sm:text-xs text-slate-500 mt-0.5">※ 加算1〜5のすべての基本となる要件です（全項目クリアが必須）。</p>
+          <p class="text-[10px] sm:text-xs text-slate-500 mt-0.5">※ 加算1（27点）は本要件のみで算定可能。加算2〜5も本要件の充足が必須です。</p>
         </div>
 
         <div id="supplyRequirementsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3"></div>
       </div>
 
-      <!-- SECTION 3: 地域医療への貢献に係る十分な体制（セルフメディ機器等） -->
+      <!-- SECTION 3: 地域医療への貢献に係る十分な体制（加算2〜5共通） -->
       <div class="space-y-2.5 pt-2">
         <div class="border-b border-slate-200 pb-2">
           <div class="flex items-center gap-2">
-            <span class="px-2 py-0.5 bg-purple-100 text-purple-800 text-[10px] font-bold rounded-full">体制要件</span>
+            <span class="px-2 py-0.5 bg-purple-100 text-purple-800 text-[10px] font-bold rounded-full">加算2〜5体制要件</span>
             <h3 class="text-sm sm:text-base font-black text-slate-900 flex items-center gap-1.5">
               <i data-lucide="building-2" class="w-4 h-4 text-purple-600"></i>
-              地域医療貢献に係る十分な体制（セルフメディケーション機器3種以上設置等）
+              地域医療貢献に係る十分な体制（備蓄1,200/1,500品目・薬局在宅24回・機器3種以上等）
             </h3>
           </div>
-          <p class="text-[10px] sm:text-xs text-slate-500 mt-0.5">※ 加算2・4等で要求される設備・体制集合です。</p>
+          <p class="text-[10px] sm:text-xs text-slate-500 mt-0.5">※ 加算2〜5で要求される設備・体制集合です（加算1には不要）。</p>
         </div>
 
         <div id="structRequirementsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-4"></div>
@@ -260,7 +260,7 @@
     <section id="tab-patient" class="tab-content hidden space-y-4">
       <div class="sticky top-14 sm:top-20 z-30 bg-gradient-to-r from-emerald-800 to-teal-900 text-white rounded-xl p-3.5 sm:p-5 shadow-md flex flex-row items-center justify-between gap-2">
         <div>
-          <span class="text-[10px] sm:text-xs text-emerald-200 uppercase font-semibold">算定可能な個別加算</span>
+          <span class="text-[10px] sm:text-xs text-emerald-200 uppercase font-semibold">算定候補となる個別加算</span>
           <div class="text-2xl sm:text-3xl font-black text-emerald-300 flex items-baseline gap-1.5">
             <span id="patientTotalPts">+0</span> <span class="text-xs sm:text-sm font-normal text-white">点</span>
             <span id="patientTotalYen" class="text-[10px] sm:text-xs font-normal text-emerald-200 ml-1">(1割: 0円 / 3割: 0円)</span>
@@ -350,14 +350,14 @@
                 <label class="flex items-start gap-2.5 p-2.5 rounded-lg border border-slate-200 bg-white hover:bg-emerald-50/40 cursor-pointer transition">
                   <input type="checkbox" id="pLeftover" onchange="triggerPatientEval()" class="w-4 h-4 text-emerald-600 rounded mt-0.5">
                   <div>
-                    <span class="font-bold text-slate-900 block">残薬調整・疑義照会（重複防止加算）</span>
+                    <span class="font-bold text-slate-900 block">残薬調整・疑義照会（調剤時残薬調整加算等）</span>
                     <span class="text-[10px] text-slate-500">処方日数調整・処方変更</span>
                   </div>
                 </label>
                 <label class="flex items-start gap-2.5 p-2.5 rounded-lg border border-slate-200 bg-white hover:bg-emerald-50/40 cursor-pointer transition">
                   <input type="checkbox" id="pTraceReport" onchange="triggerPatientEval()" class="w-4 h-4 text-emerald-600 rounded mt-0.5">
                   <div>
-                    <span class="font-bold text-slate-900 block">医師へのトレーシングレポート（TR）</span>
+                    <span class="font-bold text-slate-900 block">医師への服薬情報提供（トレーシングレポート等）</span>
                     <span class="text-[10px] text-slate-500">副作用、アドヒアランス報告</span>
                   </div>
                 </label>
@@ -368,7 +368,7 @@
 
         <div class="lg:col-span-7 space-y-3">
           <div class="flex justify-between items-center">
-            <h4 class="text-xs sm:text-sm font-bold text-slate-800">算定できる加算一覧 ＆ 薬歴記載の要点</h4>
+            <h4 class="text-xs sm:text-sm font-bold text-slate-800">算定候補一覧 ＆ 薬歴記載の要点</h4>
             <span id="patientItemCount" class="text-[11px] text-slate-500 font-medium">0 件ヒット</span>
           </div>
           <div id="patientBillingCards" class="space-y-2.5"></div>
@@ -455,28 +455,49 @@
 
       <form id="metricsForm" onsubmit="handleSaveMetrics(event)" class="space-y-4 text-xs">
         <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-2">
-          <span class="font-bold text-slate-800 text-[11px] block">🏢 基本情報</span>
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <span class="font-bold text-slate-800 text-[11px] block">🏢 基本情報 ＆ 判定モード</span>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <div>
               <label class="block font-bold text-slate-700 mb-0.5">薬局名称</label>
               <input type="text" id="inputPharmacyName" class="w-full rounded border border-slate-300 p-1.5 bg-white font-semibold">
             </div>
             <div>
+              <label class="block font-bold text-slate-700 mb-0.5">判定モード（評価期間）</label>
+              <select id="inputEvalMode" class="w-full rounded border border-slate-300 p-1.5 bg-white font-semibold">
+                <option value="continuous">継続判定・定例報告 (前年5/1〜当年4/30)</option>
+                <option value="new">新規届出 (直近1年間の実数)</option>
+              </select>
+            </div>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
+            <div>
               <label class="block font-bold text-slate-700 mb-0.5">調剤基本料区分</label>
               <select id="inputBasicFeeType" class="w-full rounded border border-slate-300 p-1.5 bg-white font-semibold">
-                <option value="basic_1">調剤基本料1 (加算1, 2, 5対象)</option>
-                <option value="other">調剤基本料1以外 (加算3, 4, 5対象)</option>
+                <option value="basic_1">調剤基本料1 (加算2・3対象 / 入口加算1)</option>
+                <option value="basic_2">調剤基本料2 (加算4・5対象 / 入口加算1)</option>
+                <option value="basic_3_a">調剤基本料3イ (加算4・5対象 / 入口加算1)</option>
+                <option value="basic_3_b">調剤基本料3ロ (加算4・5対象 / 入口加算1)</option>
+                <option value="basic_3_c">調剤基本料3ハ (加算4・5対象 / 入口加算1)</option>
+                <option value="special_a">特別調剤基本料A (所定点数10/100算定)</option>
+                <option value="special_b">特別調剤基本料B (全加算算定不可)</option>
               </select>
             </div>
             <div>
+              <label class="block font-bold text-slate-700 mb-0.5">年間処方箋受付回数(実数)</label>
+              <input type="number" id="inputAnnualRx" oninput="syncFromAnnualRx()" class="w-full rounded border border-slate-300 p-1.5 bg-white font-semibold">
+            </div>
+            <div>
               <label class="block font-bold text-slate-700 mb-0.5">月平均処方箋枚数</label>
-              <input type="number" id="inputMonthlyRx" class="w-full rounded border border-slate-300 p-1.5 bg-white font-semibold">
+              <input type="number" id="inputMonthlyRx" oninput="syncFromMonthlyRx()" class="w-full rounded border border-slate-300 p-1.5 bg-white font-semibold">
             </div>
           </div>
         </div>
 
         <div class="bg-emerald-50/50 p-3 rounded-xl border border-emerald-200 space-y-2">
-          <span class="font-bold text-emerald-900 text-[11px] block">📊 様式87の3の2 地域医療貢献実績（直近1年: 前年5/1〜当年4/30）</span>
+          <div class="flex justify-between items-center">
+            <span class="font-bold text-emerald-900 text-[11px] block">📊 様式87の3の2 地域医療貢献実績（全9項目）</span>
+            <span class="text-[10px] text-emerald-700">※ (1)〜(8)は1万回比例、(9)は薬局単位/年</span>
+          </div>
           <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
             <div>
               <label class="block font-bold text-slate-700 mb-0.5">(1) 夜間休日等(回)</label>
@@ -487,11 +508,11 @@
               <input type="number" id="inputRec2" class="w-full rounded border border-slate-300 p-1.5 bg-white font-semibold">
             </div>
             <div>
-              <label class="block font-bold text-slate-700 mb-0.5">(3) 重複防止等(回)</label>
+              <label class="block font-bold text-slate-700 mb-0.5">(3) 調剤時残薬調整等(回)</label>
               <input type="number" id="inputRec3" class="w-full rounded border border-slate-300 p-1.5 bg-white font-semibold">
             </div>
             <div class="bg-amber-100/60 p-1 rounded border border-amber-300">
-              <label class="block font-black text-amber-950 mb-0.5">(4) 指導料1イ/2イ【必須】</label>
+              <label class="block font-black text-amber-950 mb-0.5">(4) 指導料1イ/2イ【加算2・4必須】</label>
               <input type="number" id="inputRec4" class="w-full rounded border border-amber-400 p-1.5 bg-white font-black text-amber-900">
             </div>
             <div>
@@ -499,11 +520,11 @@
               <input type="number" id="inputRec5" class="w-full rounded border border-slate-300 p-1.5 bg-white font-semibold">
             </div>
             <div class="bg-emerald-100/60 p-1 rounded border border-emerald-300">
-              <label class="block font-black text-emerald-950 mb-0.5">(6) 在宅訪問指導【加算4必須】</label>
+              <label class="block font-black text-emerald-950 mb-0.5">(6) 単一建物1人在宅【加算4必須】</label>
               <input type="number" id="inputRec6" class="w-full rounded border border-emerald-400 p-1.5 bg-white font-black text-emerald-900">
             </div>
             <div>
-              <label class="block font-bold text-slate-700 mb-0.5">(7) 服薬情報等TR(回)</label>
+              <label class="block font-bold text-slate-700 mb-0.5">(7) 服薬情報等提供料等(回)</label>
               <input type="number" id="inputRec7" class="w-full rounded border border-slate-300 p-1.5 bg-white font-semibold">
             </div>
             <div>
@@ -511,26 +532,48 @@
               <input type="number" id="inputRec8" class="w-full rounded border border-slate-300 p-1.5 bg-white font-semibold">
             </div>
             <div>
-              <label class="block font-bold text-slate-700 mb-0.5">(9) 多職種連携会議(回)</label>
+              <label class="block font-bold text-slate-700 mb-0.5">(9) 多職種連携会議(回/年)</label>
               <input type="number" id="inputRec9" class="w-full rounded border border-slate-300 p-1.5 bg-white font-semibold">
             </div>
           </div>
         </div>
 
-        <div class="bg-blue-50/50 p-3 rounded-xl border border-blue-200 space-y-2">
-          <span class="font-bold text-blue-900 text-[11px] block">📦 様式87の3の1 医薬品供給対応体制（全加算共通）</span>
+        <div class="bg-purple-50/50 p-3 rounded-xl border border-purple-200 space-y-2">
+          <span class="font-bold text-purple-900 text-[11px] block">🏛️ 加算2〜5 地域医療貢献体制要件（加算1には不要）</span>
           <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
             <div>
-              <label class="block font-bold text-slate-700 mb-0.5">後発品割合(%) (基準: 85%)</label>
-              <input type="number" step="0.1" id="inputGeneric" class="w-full rounded border border-slate-300 p-1.5 bg-white font-semibold">
-            </div>
-            <div>
-              <label class="block font-bold text-slate-700 mb-0.5">備蓄品目数 (基準: 1200)</label>
+              <label class="block font-bold text-slate-700 mb-0.5">備蓄品目数 (基本1: 1200 / 他: 1500)</label>
               <input type="number" id="inputStockDrugs" class="w-full rounded border border-slate-300 p-1.5 bg-white font-semibold">
             </div>
             <div>
               <label class="block font-bold text-slate-700 mb-0.5">セルフメディ機器 (基準: 3種)</label>
               <input type="number" id="inputDeviceCount" class="w-full rounded border border-slate-300 p-1.5 bg-white font-semibold">
+            </div>
+            <div>
+              <label class="block font-bold text-slate-700 mb-0.5">OTC薬効群数 (基準: 48群)</label>
+              <input type="number" id="inputOtcCount" class="w-full rounded border border-slate-300 p-1.5 bg-white font-semibold">
+            </div>
+          </div>
+          <div class="pt-1">
+            <label class="flex items-center gap-2 font-bold text-slate-800 bg-white p-2 rounded border border-purple-200 cursor-pointer">
+              <input type="checkbox" id="inputPharmacyHomeCare24" checked class="w-4 h-4 text-purple-600 rounded">
+              <span>薬局として直近1年間に年間24回以上の在宅業務実績あり（体制要件）</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="bg-blue-50/50 p-3 rounded-xl border border-blue-200 space-y-2">
+          <span class="font-bold text-blue-900 text-[11px] block">📦 様式87の3の1 医薬品供給対応体制（全加算共通）</span>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div>
+              <label class="block font-bold text-slate-700 mb-0.5">後発品割合(%) (基準: 85.0%)</label>
+              <input type="number" step="0.1" id="inputGeneric" class="w-full rounded border border-slate-300 p-1.5 bg-white font-semibold">
+            </div>
+            <div class="flex items-center pt-3">
+              <label class="flex items-center gap-1.5 font-bold text-blue-900 cursor-pointer text-[11px]">
+                <input type="checkbox" id="inputTempExclusion" class="w-4 h-4 text-blue-600 rounded">
+                <span>供給不安薬の臨時除外特例を適用する</span>
+              </label>
             </div>
           </div>
         </div>
@@ -546,3 +589,4 @@
   <script src="/static/js/app.js"></script>
 </body>
 </html>
+

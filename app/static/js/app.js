@@ -59,6 +59,16 @@ document.addEventListener('click', (e) => {
   }
 });
 
+function syncFromAnnualRx() {
+  const annual = parseInt(document.getElementById('inputAnnualRx').value) || 0;
+  document.getElementById('inputMonthlyRx').value = Math.round(annual / 12);
+}
+
+function syncFromMonthlyRx() {
+  const monthly = parseInt(document.getElementById('inputMonthlyRx').value) || 0;
+  document.getElementById('inputAnnualRx').value = monthly * 12;
+}
+
 async function loadMetrics() {
   try {
     const res = await fetch('/api/metrics');
@@ -76,11 +86,25 @@ function populateMetricsForm(m) {
 
   document.getElementById('inputPharmacyName').value = m.pharmacy_name;
   document.getElementById('inputBasicFeeType').value = m.dispensing_basic_fee_type;
+  if (document.getElementById('inputEvalMode')) {
+    document.getElementById('inputEvalMode').value = m.evaluation_mode || 'continuous';
+  }
+  const annual = m.annual_prescriptions || (m.monthly_prescriptions * 12);
+  document.getElementById('inputAnnualRx').value = annual;
   document.getElementById('inputMonthlyRx').value = m.monthly_prescriptions;
   
   document.getElementById('inputGeneric').value = m.generic_percentage;
   document.getElementById('inputStockDrugs').value = m.stock_drugs_count;
   document.getElementById('inputDeviceCount').value = m.self_medication_device_count;
+  if (document.getElementById('inputOtcCount')) {
+    document.getElementById('inputOtcCount').value = m.otc_drug_categories_count || 50;
+  }
+  if (document.getElementById('inputPharmacyHomeCare24')) {
+    document.getElementById('inputPharmacyHomeCare24').checked = (m.has_pharmacy_home_care_24 !== false);
+  }
+  if (document.getElementById('inputTempExclusion')) {
+    document.getElementById('inputTempExclusion').checked = !!m.temporary_exclusion_enabled;
+  }
 
   document.getElementById('inputRec1').value = m.rec_1_night_holiday_count;
   document.getElementById('inputRec2').value = m.rec_2_narcotics_count;
@@ -92,9 +116,20 @@ function populateMetricsForm(m) {
   document.getElementById('inputRec8').value = m.rec_8_pediatric_special_count;
   document.getElementById('inputRec9').value = m.rec_9_multidisciplinary_conference_count;
 
+  if (document.getElementById('statAnnualRx')) {
+    document.getElementById('statAnnualRx').innerText = annual.toLocaleString();
+  }
   document.getElementById('statMonthlyRx').innerText = m.monthly_prescriptions.toLocaleString();
   document.getElementById('statStockDrugs').innerText = m.stock_drugs_count.toLocaleString();
   document.getElementById('genericRateDisplay').innerText = `${m.generic_percentage.toFixed(1)} %`;
+  
+  if (document.getElementById('statEvalMode')) {
+    document.getElementById('statEvalMode').innerText = (m.evaluation_mode === 'new') ? '新規届出モード（直近1年）' : '定例報告（前年5/1〜当年4/30）';
+  }
+  if (document.getElementById('statRxScale')) {
+    const rxScale = annual / 10000.0;
+    document.getElementById('statRxScale').innerText = `補正係数: ${rxScale.toFixed(2)}倍`;
+  }
 }
 
 async function evaluateRegional(metrics) {
@@ -121,7 +156,8 @@ function renderRegionalDashboard(result, metrics) {
   document.getElementById('tierPoints').innerText = `+${result.points_earned} 点`;
   document.getElementById('genericStatusText').innerText = metrics.generic_percentage >= 85.0 ? '適合 (85%以上)' : '未達 (85%未満)';
 
-  const annualYen = metrics.monthly_prescriptions * 12 * result.points_earned * 10;
+  const annualRx = metrics.annual_prescriptions || (metrics.monthly_prescriptions * 12);
+  const annualYen = annualRx * result.points_earned * 10;
   document.getElementById('annualRevenueEst').innerText = `¥ ${annualYen.toLocaleString()}`;
 
   document.getElementById('summaryMsgText').innerText = result.summary_message;
@@ -129,7 +165,7 @@ function renderRegionalDashboard(result, metrics) {
   // Supply Actions
   const sList = document.getElementById('supplyActionList');
   sList.innerHTML = result.supply_actions.length === 0 
-    ? '<li class="text-emerald-800 font-bold">全8項目を完全クリア中！</li>' 
+    ? '<li class="text-emerald-800 font-bold">医薬品供給対応体制を完全クリア中！</li>' 
     : result.supply_actions.map(a => `<li>${a}</li>`).join('');
 
   // Struct Actions
@@ -175,7 +211,7 @@ function renderRegionalDashboard(result, metrics) {
     perfGrid.appendChild(card);
   });
 
-  // 2. Supply 8 Grid
+  // 2. Supply Grid
   const supplyGrid = document.getElementById('supplyRequirementsGrid');
   supplyGrid.innerHTML = '';
   result.supply_requirements.forEach(req => {
@@ -186,7 +222,7 @@ function renderRegionalDashboard(result, metrics) {
       <div class="flex justify-between items-center mb-1">
         <span class="font-bold text-slate-800 text-[11px]">${req.name}</span>
         <span class="text-[9px] px-1.5 py-0.2 rounded font-bold ${isOk ? 'bg-blue-100 text-blue-800' : 'bg-rose-100 text-rose-800'}">
-          ${isOk ? '適' : '未達'}
+          ${isOk ? '適合' : '未達'}
         </span>
       </div>
       <span class="text-[10px] text-slate-500">${req.official_ref}</span>
@@ -218,13 +254,21 @@ function renderRegionalDashboard(result, metrics) {
 
 async function handleSaveMetrics(e) {
   e.preventDefault();
+  const annualRx = parseInt(document.getElementById('inputAnnualRx').value) || 14400;
+  const monthlyRx = parseInt(document.getElementById('inputMonthlyRx').value) || Math.round(annualRx / 12);
+
   const updated = {
     pharmacy_name: document.getElementById('inputPharmacyName').value || 'ひまわり調剤薬局',
     dispensing_basic_fee_type: document.getElementById('inputBasicFeeType').value,
-    monthly_prescriptions: parseInt(document.getElementById('inputMonthlyRx').value) || 1200,
+    evaluation_mode: document.getElementById('inputEvalMode') ? document.getElementById('inputEvalMode').value : 'continuous',
+    annual_prescriptions: annualRx,
+    monthly_prescriptions: monthlyRx,
     generic_percentage: parseFloat(document.getElementById('inputGeneric').value) || 85.0,
+    temporary_exclusion_enabled: document.getElementById('inputTempExclusion') ? document.getElementById('inputTempExclusion').checked : false,
     stock_drugs_count: parseInt(document.getElementById('inputStockDrugs').value) || 1200,
     self_medication_device_count: parseInt(document.getElementById('inputDeviceCount').value) || 3,
+    otc_drug_categories_count: document.getElementById('inputOtcCount') ? parseInt(document.getElementById('inputOtcCount').value) || 50 : 50,
+    has_pharmacy_home_care_24: document.getElementById('inputPharmacyHomeCare24') ? document.getElementById('inputPharmacyHomeCare24').checked : true,
     
     rec_1_night_holiday_count: parseInt(document.getElementById('inputRec1').value) || 0,
     rec_2_narcotics_count: parseInt(document.getElementById('inputRec2').value) || 0,
