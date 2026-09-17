@@ -105,6 +105,15 @@ function populateMetricsForm(m) {
   if (document.getElementById('inputTempExclusion')) {
     document.getElementById('inputTempExclusion').checked = !!m.temporary_exclusion_enabled;
   }
+  if (document.getElementById('inputBasicServicesCount')) {
+    document.getElementById('inputBasicServicesCount').value = m.basic_services_count || 25;
+  }
+  if (document.getElementById('checkUnsettledDiscount')) {
+    document.getElementById('checkUnsettledDiscount').checked = !!m.has_unsettled_or_unreported_discount;
+  }
+  if (document.getElementById('checkLocationDiscount')) {
+    document.getElementById('checkLocationDiscount').checked = !!m.is_new_location_dependent_pharmacy;
+  }
 
   document.getElementById('inputRec1').value = m.rec_1_night_holiday_count;
   document.getElementById('inputRec2').value = m.rec_2_narcotics_count;
@@ -154,6 +163,16 @@ function renderRegionalDashboard(result, metrics) {
     : 'text-xl sm:text-2xl font-black text-rose-600 mt-0.5 sm:mt-1';
   
   document.getElementById('tierPoints').innerText = `+${result.points_earned} 点`;
+  
+  if (document.getElementById('basicFeeLabel')) {
+    const dCount = result.basic_fee_deductions_applied ? result.basic_fee_deductions_applied.length : 0;
+    const dSuffix = dCount > 0 ? ` (減算適用)` : '';
+    document.getElementById('basicFeeLabel').innerText = `${result.basic_fee_name} (${result.basic_fee_final_points}点${dSuffix}):`;
+  }
+  if (document.getElementById('totalBasicAndTierPoints')) {
+    document.getElementById('totalBasicAndTierPoints').innerText = `合計 ${result.total_basic_and_regional_points} 点 / 枚`;
+  }
+
   document.getElementById('genericStatusText').innerText = metrics.generic_percentage >= 85.0 ? '適合 (85%以上)' : '未達 (85%未満)';
 
   const annualRx = metrics.annual_prescriptions || (metrics.monthly_prescriptions * 12);
@@ -269,6 +288,9 @@ async function handleSaveMetrics(e) {
     self_medication_device_count: parseInt(document.getElementById('inputDeviceCount').value) || 3,
     otc_drug_categories_count: document.getElementById('inputOtcCount') ? parseInt(document.getElementById('inputOtcCount').value) || 50 : 50,
     has_pharmacy_home_care_24: document.getElementById('inputPharmacyHomeCare24') ? document.getElementById('inputPharmacyHomeCare24').checked : true,
+    basic_services_count: document.getElementById('inputBasicServicesCount') ? parseInt(document.getElementById('inputBasicServicesCount').value) || 25 : 25,
+    has_unsettled_or_unreported_discount: document.getElementById('checkUnsettledDiscount') ? document.getElementById('checkUnsettledDiscount').checked : false,
+    is_new_location_dependent_pharmacy: document.getElementById('checkLocationDiscount') ? document.getElementById('checkLocationDiscount').checked : false,
     
     rec_1_night_holiday_count: parseInt(document.getElementById('inputRec1').value) || 0,
     rec_2_narcotics_count: parseInt(document.getElementById('inputRec2').value) || 0,

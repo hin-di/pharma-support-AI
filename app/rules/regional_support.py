@@ -2,7 +2,8 @@ import math
 from typing import List
 from app.models.schemas import (
     PharmacyMetrics, RegionalEvaluationResult, RequirementStatus,
-    ADD01_POINTS, ADD02_POINTS, ADD03_POINTS, ADD04_POINTS, ADD05_POINTS
+    ADD01_POINTS, ADD02_POINTS, ADD03_POINTS, ADD04_POINTS, ADD05_POINTS,
+    BASIC_FEE_MASTER
 )
 
 def get_default_metrics() -> PharmacyMetrics:
@@ -362,12 +363,64 @@ def evaluate_regional_support(metrics: PharmacyMetrics) -> RegionalEvaluationRes
             points_earned = 0
             summary_msg = "現在、医薬品供給対応体制（後発品85%以上および供給8項目）に未達項目があります。"
 
+    # 調剤基本料 基礎点数および減算の精密判定（注3, 注4, 注8, 注15, 下限3点ルール）
+    fee_info = BASIC_FEE_MASTER.get(fee_type, {"name": "調剤基本料1", "points": 47})
+    b_name = fee_info.get("name", "調剤基本料1")
+    b_base_pts = fee_info.get("points", 47)
+    current_fee_pts = float(b_base_pts)
+    deductions_applied: List[str] = []
+
+    # (1) 注4：未妥結・かかりつけ機能未実施減算（50/100）
+    service_threshold = 100 if (is_special_a or is_special_b) else 10
+    is_basic_services_insufficient = (metrics.basic_services_count < service_threshold)
+    is_note4_applicable = metrics.has_unsettled_or_unreported_discount or is_basic_services_insufficient
+
+    if is_note4_applicable:
+        current_fee_pts = round(current_fee_pts * 0.5)
+        reason = "未妥結/未報告" if metrics.has_unsettled_or_unreported_discount else f"基本的業務実績不足({metrics.basic_services_count}回 < 基準{service_threshold}回)"
+        deductions_applied.append(f"注4減算 (50/100算定: {reason})")
+        audit_trail.append(f"・【調剤基本料減算】注4適用: 所定点数の50/100に減算 → {int(current_fee_pts)}点 ({reason})")
+
+    # (2) 注3：複数医療機関処方箋同時受付（2回目以降受付: 80/100）
+    if metrics.is_multiple_reception_second:
+        current_fee_pts = round(current_fee_pts * 0.8)
+        deductions_applied.append("注3減算 (複数医療機関同時受付2回目以降: 80/100算定)")
+        audit_trail.append(f"・【調剤基本料減算】注3適用: 2回目以降受付80/100に減算 → {int(current_fee_pts)}点")
+
+    # (3) 注15：門前薬局等立地依存減算（▲15点）
+    if metrics.is_new_location_dependent_pharmacy:
+        current_fee_pts = current_fee_pts - 15.0
+        deductions_applied.append("注15減算 (新設立地依存/門前薬局減算: ▲15点)")
+        audit_trail.append(f"・【調剤基本料減算】注15適用: 新設立地依存減算 ▲15点 → {int(current_fee_pts)}点")
+
+    # (4) 注8：後発医薬品調剤割合減算（50%以下かつ月600回超: ▲5点）
+    is_monthly_rx_over_600 = (metrics.monthly_prescriptions > 600 or annual_rx > 7200)
+    if ge_rate <= 50.0 and is_monthly_rx_over_600:
+        current_fee_pts = current_fee_pts - 5.0
+        deductions_applied.append(f"注8減算 (後発品調剤割合5割以下({ge_rate:.1f}%): ▲5点)")
+        audit_trail.append(f"・【調剤基本料減算】注8適用: 後発医薬品調剤割合50%以下 ▲5点 → {int(current_fee_pts)}点")
+
+    # (5) 下限ルール：減算適用後の点数が3点未満の場合は最低3点を算定
+    if current_fee_pts < 3.0:
+        current_fee_pts = 3.0
+        audit_trail.append("・【調剤基本料下限】減算適用後の点数が3点未満のため、告示規定に基づき最低保障 3点 を算定します。")
+
+    b_final_pts = int(current_fee_pts)
+    total_pts = b_final_pts + points_earned
+
     audit_trail.append(f"【最終判定結果】: {current_tier} ({points_earned}点 / 処方箋)")
+    fee_desc = f"{b_name} [基礎{b_base_pts}点 → 最終{b_final_pts}点]" if deductions_applied else f"{b_name} ({b_final_pts}点)"
+    audit_trail.append(f"【基本料＋加算合計】: {fee_desc} ＋ {current_tier} ({points_earned}点) ＝ 合計 {total_pts}点 / 処方箋")
 
     return RegionalEvaluationResult(
         current_tier=current_tier,
         tier_code=tier_code,
         points_earned=points_earned,
+        basic_fee_name=b_name,
+        basic_fee_base_points=b_base_pts,
+        basic_fee_final_points=b_final_pts,
+        basic_fee_deductions_applied=deductions_applied,
+        total_basic_and_regional_points=total_pts,
         supply_system_qualified=supply_system_qualified,
         structural_system_qualified=structural_system_qualified,
         performance_system_qualified=performance_system_qualified,

@@ -406,6 +406,74 @@ class TestRegionalSupportRevision2026(unittest.TestCase):
         self.assertEqual(res_add4.current_tier, "地域支援・医薬品供給対応体制加算4")
         self.assertEqual(res_add4.points_earned, 4)
 
+    def test_basic_fee_deduction_note4(self):
+        """注4減算: 未妥結または基本的業務10回未満で所定点数の50/100算定（基本料1: 47 -> 24点）"""
+        # 1. 基本的業務9回（基準10回未満）
+        m = PharmacyMetrics(
+            dispensing_basic_fee_type="basic_1",
+            basic_services_count=9
+        )
+        res = evaluate_regional_support(m)
+        self.assertEqual(res.basic_fee_base_points, 47)
+        self.assertEqual(res.basic_fee_final_points, 24) # round(47 * 0.5) = 24
+        self.assertTrue(any("注4減算" in d for d in res.basic_fee_deductions_applied))
+
+        # 2. 未妥結・未報告フラグ True
+        m2 = PharmacyMetrics(
+            dispensing_basic_fee_type="basic_1",
+            basic_services_count=20,
+            has_unsettled_or_unreported_discount=True
+        )
+        res2 = evaluate_regional_support(m2)
+        self.assertEqual(res2.basic_fee_final_points, 24)
+
+    def test_basic_fee_deduction_note3(self):
+        """注3減算: 複数医療機関処方箋の同時受付2回目以降で80/100算定（基本料1: 47 -> 38点）"""
+        m = PharmacyMetrics(
+            dispensing_basic_fee_type="basic_1",
+            is_multiple_reception_second=True
+        )
+        res = evaluate_regional_support(m)
+        self.assertEqual(res.basic_fee_final_points, 38) # round(47 * 0.8) = 37.6 -> 38
+        self.assertTrue(any("注3減算" in d for d in res.basic_fee_deductions_applied))
+
+    def test_basic_fee_deduction_note15(self):
+        """注15減算: 新設立地依存（門前薬局減算）▲15点（基本料1: 47 -> 32点）"""
+        m = PharmacyMetrics(
+            dispensing_basic_fee_type="basic_1",
+            is_new_location_dependent_pharmacy=True
+        )
+        res = evaluate_regional_support(m)
+        self.assertEqual(res.basic_fee_final_points, 32) # 47 - 15 = 32
+        self.assertTrue(any("注15減算" in d for d in res.basic_fee_deductions_applied))
+
+    def test_basic_fee_deduction_note8(self):
+        """注8減算: 後発品割合50%以下かつ月600回超で▲5点（基本料1: 47 -> 42点）"""
+        m = PharmacyMetrics(
+            dispensing_basic_fee_type="basic_1",
+            generic_percentage=48.0,
+            monthly_prescriptions=1200
+        )
+        res = evaluate_regional_support(m)
+        self.assertEqual(res.basic_fee_final_points, 42) # 47 - 5 = 42
+        self.assertTrue(any("注8減算" in d for d in res.basic_fee_deductions_applied))
+        # かつGE50%以下は地域支援加算も算定不可
+        self.assertEqual(res.current_tier, "算定不可")
+        self.assertEqual(res.points_earned, 0)
+
+    def test_basic_fee_minimum_guarantee(self):
+        """下限3点保障テスト: 重複減算により3点未満になる場合でも最低3点を算定"""
+        # 調剤基本料3ロ (20点) + 注4 (10点) + 注15 (▲15点) = -5点 -> 最低3点
+        m = PharmacyMetrics(
+            dispensing_basic_fee_type="basic_3_b", # 20点
+            basic_services_count=5,               # 注4該当 -> 10点
+            is_new_location_dependent_pharmacy=True # 注15該当 -> 10 - 15 = -5点
+        )
+        res = evaluate_regional_support(m)
+        self.assertEqual(res.basic_fee_base_points, 20)
+        self.assertEqual(res.basic_fee_final_points, 3) # 最低3点保障
+        self.assertEqual(res.total_basic_and_regional_points, 3 + res.points_earned)
+
 if __name__ == '__main__':
     unittest.main()
 

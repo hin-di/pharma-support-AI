@@ -1,12 +1,23 @@
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 
-# 正式告示点数定数
+# 正式告示点数定数（地域支援・医薬品供給対応体制加算）
 ADD01_POINTS = 27
 ADD02_POINTS = 59
 ADD03_POINTS = 67
 ADD04_POINTS = 37
 ADD05_POINTS = 59
+
+# 正式告示点数定数（調剤基本料マスター）
+BASIC_FEE_MASTER: Dict[str, Dict[str, Any]] = {
+    "basic_1": {"name": "調剤基本料1", "points": 47, "desc": "調剤基本料２・３、特別調剤基本料以外"},
+    "basic_2": {"name": "調剤基本料2", "points": 30, "desc": "処方箋受付回数月4,000回超かつ集中率70%超等"},
+    "basic_3_a": {"name": "調剤基本料3イ", "points": 25, "desc": "同一グループ月3.5万回超〜40万回 かつ 集中率85%超"},
+    "basic_3_b": {"name": "調剤基本料3ロ", "points": 20, "desc": "同一グループ月40万回超 かつ 集中率85%超"},
+    "basic_3_c": {"name": "調剤基本料3ハ", "points": 37, "desc": "同一グループ月40万回超 かつ 集中率85%以下"},
+    "special_a": {"name": "特別調剤基本料A", "points": 5, "desc": "いわゆる同一敷地内薬局（所定点数100分の10算定）"},
+    "special_b": {"name": "特別調剤基本料B", "points": 3, "desc": "調剤基本料の届出がない保険薬局（全加算算定不可）"}
+}
 
 class RequirementStatus(BaseModel):
     id: str
@@ -25,6 +36,11 @@ class RegionalEvaluationResult(BaseModel):
     current_tier: str
     tier_code: str
     points_earned: int
+    basic_fee_name: str = "調剤基本料1"
+    basic_fee_base_points: int = 47
+    basic_fee_final_points: int = 47
+    basic_fee_deductions_applied: List[str] = Field(default_factory=list)
+    total_basic_and_regional_points: int = 47
     supply_system_qualified: bool
     structural_system_qualified: bool
     performance_system_qualified: bool
@@ -39,12 +55,19 @@ class RegionalEvaluationResult(BaseModel):
     performance_actions: List[str] = Field(default_factory=list)
     audit_trail: List[str] = Field(default_factory=list)
 
+
 class PharmacyMetrics(BaseModel):
     pharmacy_name: str = "ひまわり調剤薬局"
     dispensing_basic_fee_type: str = "basic_1"  # "basic_1", "basic_2", "basic_3_a", "basic_3_b", "basic_3_c", "special_a", "special_b"
     evaluation_mode: str = "continuous"         # "continuous" (継続判定・定例報告), "new" (新規届出)
     annual_prescriptions: int = 14400          # 直近1年間の総処方箋受付回数（1万枚補正用実数）
     monthly_prescriptions: int = 1200          # 月平均処方箋枚数
+
+    # 0. 調剤基本料 減算判定項目（注3, 注4, 注8, 注15）
+    has_unsettled_or_unreported_discount: bool = False  # (注4-ア/イ) 妥結率50%以下または報告未提出 (50/100算定)
+    basic_services_count: int = 25                     # (注4-ウ) 直近1年間のかかりつけ基本的業務算定回数 (基準:10回以上、特別A/Bは100回以上)
+    is_new_location_dependent_pharmacy: bool = False    # (注15) 門前薬局等立地依存減算 (R8.6.1以降新規開設かつ集中率85%超等: ▲15点)
+    is_multiple_reception_second: bool = False          # (注3) 複数保険医療機関処方箋同時受付（2回目以降受付: 80/100算定)
     
     # 評価期間定義
     generic_ratio_period: str = "直近3か月間"
