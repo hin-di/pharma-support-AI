@@ -191,6 +191,24 @@ class TestRegionalSupportRevision2026(unittest.TestCase):
         self.assertEqual(req9.target_value_text, "基準: 1 回 (上位: 5)")
         self.assertTrue(req9.is_satisfied)
 
+    def test_rx_scaling_min_10k_floor(self):
+        """処方箋受付回数が1万枚未満（例: 5,000枚）の場合、下限1万回（係数1.0倍）として計算されることの検証"""
+        m_5k = PharmacyMetrics(
+            dispensing_basic_fee_type="basic_1",
+            annual_prescriptions=5000, # 1万枚未満 -> 1.0倍下限
+            rec_1_night_holiday_count=39, # 基準40回 -> 39回は未達（0.5倍の20回にはならず40回が基準）
+            rec_4_guidance_1a_2a_count=20  # 基準20回 -> 20回で達成
+        )
+        res = evaluate_regional_support(m_5k)
+        
+        req1 = next(r for r in res.performance_requirements if r.id == "REQ-PRF-01")
+        self.assertEqual(req1.target_value_text, "基準: 40 回 (上位: 400)")
+        self.assertFalse(req1.is_satisfied)
+
+        req4 = next(r for r in res.performance_requirements if r.id == "REQ-PRF-04")
+        self.assertEqual(req4.target_value_text, "基準: 20 回 (上位: 40)")
+        self.assertTrue(req4.is_satisfied)
+
     def test_pharmacy_home_care_24_structural_requirement(self):
         """加算2〜5共通の体制要件「薬局として年間24回以上の在宅実績」の未達テスト"""
         m = PharmacyMetrics(
@@ -211,7 +229,7 @@ class TestRegionalSupportRevision2026(unittest.TestCase):
         self.assertEqual(res.points_earned, 27)
 
     def test_stock_drugs_boundary_basic1_vs_non_basic1(self):
-        """備蓄品目数の基本料別境界値テスト（基本料1: 1199 vs 1200 / 基本料2: 1499 vs 1500）"""
+        """備蓄品目数の境界値テスト（全基本料共通: 1199 vs 1200）"""
         # 基本料1: 1,199品目は未達
         m_b1_fail = PharmacyMetrics(dispensing_basic_fee_type="basic_1", stock_drugs_count=1199)
         self.assertFalse(evaluate_regional_support(m_b1_fail).structural_system_qualified)
@@ -220,12 +238,12 @@ class TestRegionalSupportRevision2026(unittest.TestCase):
         m_b1_pass = PharmacyMetrics(dispensing_basic_fee_type="basic_1", stock_drugs_count=1200)
         self.assertTrue(evaluate_regional_support(m_b1_pass).structural_system_qualified)
 
-        # 基本料2: 1,499品目は未達
-        m_b2_fail = PharmacyMetrics(dispensing_basic_fee_type="basic_2", stock_drugs_count=1499)
+        # 基本料2: 1,199品目は未達
+        m_b2_fail = PharmacyMetrics(dispensing_basic_fee_type="basic_2", stock_drugs_count=1199)
         self.assertFalse(evaluate_regional_support(m_b2_fail).structural_system_qualified)
 
-        # 基本料2: 1,500品目は適合
-        m_b2_pass = PharmacyMetrics(dispensing_basic_fee_type="basic_2", stock_drugs_count=1500)
+        # 基本料2: 1,200品目は適合
+        m_b2_pass = PharmacyMetrics(dispensing_basic_fee_type="basic_2", stock_drugs_count=1200)
         self.assertTrue(evaluate_regional_support(m_b2_pass).structural_system_qualified)
 
     def test_ge_boundary_and_special(self):
@@ -358,12 +376,12 @@ class TestRegionalSupportRevision2026(unittest.TestCase):
         )
         self.assertEqual(evaluate_regional_support(m_add4).current_tier, "地域支援・医薬品供給対応体制加算4")
 
-        # 加算1 (実績不足または体制1500未達でも供給体制充足なら加算1にフォールバック)
+        # 加算1 (実績不足または体制1200未達でも供給体制充足なら加算1にフォールバック)
         m_add1 = PharmacyMetrics(
             dispensing_basic_fee_type="basic_2",
             annual_prescriptions=10000,
             generic_percentage=88.0,
-            stock_drugs_count=1200 # 1500未満
+            stock_drugs_count=1000 # 1200未満
         )
         self.assertEqual(evaluate_regional_support(m_add1).current_tier, "地域支援・医薬品供給対応体制加算1")
         self.assertEqual(evaluate_regional_support(m_add1).points_earned, 27)

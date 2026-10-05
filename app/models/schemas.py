@@ -88,7 +88,7 @@ class PharmacyMetrics(BaseModel):
     has_regional_drug_collaboration: bool = True # (9) 地域医療機関・薬局との品目情報共有連携
     
     # 2. 地域医療への貢献に係る十分な体制（加算2〜5共通の体制要件）
-    stock_drugs_count: int = 1350              # 備蓄品目数 (基本料1: >=1200品目, 基本料1以外: >=1500品目)
+    stock_drugs_count: int = 1350              # 備蓄品目数 (全基本料共通: >=1200品目)
     has_pharmacy_home_care_24: bool = True     # 薬局としての年間在宅実績 24回以上 (体制要件)
     has_24h_system: bool = True                # (2) 24時間調剤・在宅対応体制 (週45時間以上開局等)
     has_narcotics_license: bool = True         # (3) 麻薬小売業免許及び管理保管設備

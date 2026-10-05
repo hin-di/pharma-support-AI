@@ -37,14 +37,16 @@ def evaluate_regional_support(metrics: PharmacyMetrics) -> RegionalEvaluationRes
     is_special_a = (fee_type == "special_a")
     is_non_basic1_eligible = fee_type in ADD04_ELIGIBLE_FEES and not is_basic_1
 
-    # 1. 処方箋受付回数1万回当たりの補正係数算出（様式87の3の2）
+    # 1. 処方箋受付回数1万回当たりの補正係数算出（様式87の3の2: 最低1万回適用）
     annual_rx = metrics.annual_prescriptions or (metrics.monthly_prescriptions * 12)
-    rx_factor = annual_rx / 10000.0
+    effective_rx = max(10000, annual_rx)
+    rx_factor = effective_rx / 10000.0
 
     eval_mode_text = "定例報告（継続判定: 前年5/1〜当年4/30）" if metrics.evaluation_mode == "continuous" else "新規届出（直近1年間）"
     audit_trail.append(f"・調剤基本料区分: {fee_type} ({'調剤基本料1' if is_basic_1 else ('特別調剤基本料B' if is_special_b else '調剤基本料1以外')})")
     audit_trail.append(f"・判定モード: {eval_mode_text}")
-    audit_trail.append(f"・直近1年間の総処方箋受付回数: {annual_rx:,} 枚（1万回当たり補正係数: {rx_factor:.2f}倍）")
+    scale_note = "（※1万回未満のため最低1万回・1.00倍適用）" if annual_rx < 10000 else ""
+    audit_trail.append(f"・直近1年間の総処方箋受付回数: {annual_rx:,} 枚（1万回当たり補正係数: {rx_factor:.2f}倍{scale_note}）")
     audit_trail.append(f"・後発品割合 評価期間: {metrics.generic_ratio_period} (規格単位数量ベース)")
 
     # 特別調剤基本料Bの事前チェック
@@ -100,7 +102,7 @@ def evaluate_regional_support(metrics: PharmacyMetrics) -> RegionalEvaluationRes
             target_value_text="必須",
             is_satisfied=s_ok,
             progress_percentage=100.0 if s_ok else 0.0,
-            shortage_text="充足" if s_ok else "要対応",
+            shortage_text="充足" if s_ok else "未確認",
             official_ref=sref,
             advice=sadvice
         ))
@@ -109,12 +111,12 @@ def evaluate_regional_support(metrics: PharmacyMetrics) -> RegionalEvaluationRes
     audit_trail.append(f"【様式87の3の1 医薬品供給安定体制】: {'適合 (全項目充足)' if supply_system_qualified else '不適合'}")
 
     # 3. 地域医療への貢献に係る十分な体制（加算2〜5共通の体制要件）
-    # (1) 備蓄品目数: 基本料1=1200品目以上 / 基本料1以外=1500品目以上
-    required_stock = 1200 if is_basic_1 else 1500
+    # (1) 備蓄品目数: 全基本料共通 1,200品目以上
+    required_stock = 1200
     stock_ok = metrics.stock_drugs_count >= required_stock
     struct_reqs.append(RequirementStatus(
         id="REQ-STR-01",
-        name=f"医療用医薬品の備蓄品目数（基準: {'1,200' if is_basic_1 else '1,500'}品目以上）",
+        name="医療用医薬品の備蓄品目数（基準: 1,200品目以上）",
         category="十分な体制要件(加算2〜5)",
         requirement_type="structural",
         current_value_text=f"{metrics.stock_drugs_count:,} 品目",
@@ -123,7 +125,7 @@ def evaluate_regional_support(metrics: PharmacyMetrics) -> RegionalEvaluationRes
         progress_percentage=round(min(100.0, (metrics.stock_drugs_count / float(required_stock)) * 100), 1),
         shortage_text="充足" if stock_ok else f"未充足 (不足: {required_stock - metrics.stock_drugs_count} 品目)",
         official_ref="施設基準通知 第8の2(2)イ(1) / 様式87の3の2 1.(1)",
-        advice=f"主たる保険医療機関の処方箋のみならず幅広い医療用医薬品の備蓄（{'基本料1は1,200品目' if is_basic_1 else '基本料1以外は1,500品目'}以上）"
+        advice="主たる保険医療機関の処方箋のみならず幅広い医療用医薬品の備蓄（1,200品目以上）"
     ))
     if not stock_ok:
         struct_actions.append(f"備蓄医薬品数が {metrics.stock_drugs_count} 品目で基準（{required_stock}品目）に未達です。")
@@ -202,13 +204,9 @@ def evaluate_regional_support(metrics: PharmacyMetrics) -> RegionalEvaluationRes
             advice=stadvice
         ))
 
-    # 調剤基本料1用（1,200品目）および調剤基本料1以外用（1,500品目）の構造要件充足
-    stock_basic1_ok = metrics.stock_drugs_count >= 1200
-    stock_non_basic1_ok = metrics.stock_drugs_count >= 1500
-
-    structural_basic1_qualified = stock_basic1_ok and home_care_24_ok and device_ok and other_struct_ok
-    structural_non_basic1_qualified = stock_non_basic1_ok and home_care_24_ok and device_ok and other_struct_ok
-    structural_system_qualified = structural_basic1_qualified if is_basic_1 else structural_non_basic1_qualified
+    # 構造要件：備蓄品目数（全基本料共通で1,200品目以上）
+    stock_ok = metrics.stock_drugs_count >= 1200
+    structural_system_qualified = stock_ok and home_care_24_ok and device_ok and other_struct_ok
 
     audit_trail.append(f"【地域医療貢献に係る十分な体制】: {'適合' if structural_system_qualified else '不適合'}")
 
@@ -285,19 +283,19 @@ def evaluate_regional_support(metrics: PharmacyMetrics) -> RegionalEvaluationRes
 
     # 加算2 (59点): 調剤基本料1 ＋ 加算1の施設基準 ＋ 十分な体制（1200品目等） ＋ (4)を含む3項目以上
     tier2_perf_qualified = rec_4_tier2_ok and (tier2_satisfied_count >= 3)
-    rule_add02 = is_basic_1 and supply_system_qualified and structural_basic1_qualified and tier2_perf_qualified
+    rule_add02 = is_basic_1 and supply_system_qualified and structural_system_qualified and tier2_perf_qualified
 
     # 加算3 (67点): 調剤基本料1 ＋ 加算1の施設基準 ＋ 十分な体制（1200品目等） ＋ 7項目以上（(4)は単独必須ではない）
     tier3_perf_qualified = (tier2_satisfied_count >= 7)
-    rule_add03 = is_basic_1 and supply_system_qualified and structural_basic1_qualified and tier3_perf_qualified
+    rule_add03 = is_basic_1 and supply_system_qualified and structural_system_qualified and tier3_perf_qualified
 
-    # 加算4 (37点): 調剤基本料1以外（特別B除く） ＋ 加算1の施設基準 ＋ 十分な体制（1500品目等） ＋ (4)及び(6)を含む3項目以上
+    # 加算4 (37点): 調剤基本料1以外（特別B除く） ＋ 加算1の施設基準 ＋ 十分な体制（1200品目等） ＋ (4)及び(6)を含む3項目以上
     tier4_perf_qualified = rec_4_tier4_ok and rec_6_tier4_ok and (tier4_satisfied_count >= 3)
-    rule_add04 = is_non_basic1_eligible and supply_system_qualified and structural_non_basic1_qualified and tier4_perf_qualified
+    rule_add04 = is_non_basic1_eligible and supply_system_qualified and structural_system_qualified and tier4_perf_qualified
 
-    # 加算5 (59点): 調剤基本料1以外（特別B除く） ＋ 加算1の施設基準 ＋ 十分な体制（1500品目等） ＋ 7項目以上（(4)(6)は単独必須ではない）
+    # 加算5 (59点): 調剤基本料1以外（特別B除く） ＋ 加算1の施設基準 ＋ 十分な体制（1200品目等） ＋ 7項目以上（(4)(6)は単独必須ではない）
     tier5_perf_qualified = (tier4_satisfied_count >= 7)
-    rule_add05 = is_non_basic1_eligible and supply_system_qualified and structural_non_basic1_qualified and tier5_perf_qualified
+    rule_add05 = is_non_basic1_eligible and supply_system_qualified and structural_system_qualified and tier5_perf_qualified
 
     # 最終加算の決定（最も有利な点数を選択）
     current_tier = "算定不可"
@@ -344,13 +342,13 @@ def evaluate_regional_support(metrics: PharmacyMetrics) -> RegionalEvaluationRes
             tier_code = "tier_5"
             points_earned = pts_add05  # 59点 (特別Aは6点)
             performance_system_qualified = True
-            summary_msg = f"調剤基本料1以外において医薬品供給体制・十分な体制（1,500品目等）及び上位実績7項目（現在{tier4_satisfied_count}項目）を満たし、加算5（{pts_add05}点）に適合しています。"
+            summary_msg = f"調剤基本料1以外において医薬品供給体制・十分な体制（1,200品目等）及び上位実績7項目（現在{tier4_satisfied_count}項目）を満たし、加算5（{pts_add05}点）に適合しています。"
         elif rule_add04:
             current_tier = "地域支援・医薬品供給対応体制加算4"
             tier_code = "tier_4"
             points_earned = pts_add04  # 37点 (特別Aは4点)
             performance_system_qualified = True
-            summary_msg = f"調剤基本料1以外において医薬品供給体制・十分な体制（1,500品目等）及び実績（(4)及び(6)を含む{tier4_satisfied_count}項目）を満たし、加算4（{pts_add04}点）に適合しています。"
+            summary_msg = f"調剤基本料1以外において医薬品供給体制・十分な体制（1,200品目等）及び実績（(4)及び(6)を含む{tier4_satisfied_count}項目）を満たし、加算4（{pts_add04}点）に適合しています。"
         elif rule_add01:
             current_tier = "地域支援・医薬品供給対応体制加算1"
             tier_code = "tier_1"

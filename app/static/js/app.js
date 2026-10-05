@@ -136,8 +136,10 @@ function populateMetricsForm(m) {
     document.getElementById('statEvalMode').innerText = (m.evaluation_mode === 'new') ? '新規届出モード（直近1年）' : '定例報告（前年5/1〜当年4/30）';
   }
   if (document.getElementById('statRxScale')) {
-    const rxScale = annual / 10000.0;
-    document.getElementById('statRxScale').innerText = `補正係数: ${rxScale.toFixed(2)}倍`;
+    const effectiveRx = Math.max(10000, annual);
+    const rxScale = effectiveRx / 10000.0;
+    const note = (annual < 10000) ? ' (最低1万回補正適用)' : '';
+    document.getElementById('statRxScale').innerText = `補正係数: ${rxScale.toFixed(2)}倍${note}`;
   }
 }
 
